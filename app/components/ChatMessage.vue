@@ -1,43 +1,42 @@
 <template>
-  <div class="flex gap-3 message-appear" :class="isUser ? 'flex-row-reverse' : ''">
+  <div class="flex gap-4" :class="isUser ? 'flex-row-reverse' : ''">
     <!-- avatar -->
     <div
-      class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-md"
-      :class="
-        isUser
-          ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-          : 'bg-gradient-to-br from-primary-500 to-primary-600'
-      "
+      class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center"
+      :class="isUser ? 'bg-neutral-200 dark:bg-neutral-700' : 'bg-primary-500'"
     >
       <UIcon
         :name="isUser ? 'i-lucide-user' : 'i-lucide-sparkles'"
-        class="text-white text-sm"
+        :class="isUser ? 'text-neutral-600 dark:text-neutral-300' : 'text-white'"
+        class="text-sm"
       />
     </div>
 
-    <!-- message bubble -->
-    <div
-      class="max-w-[80%] rounded-2xl px-4 py-3 shadow-sm"
-      :class="
-        isUser
-          ? 'bg-blue-500 text-white rounded-br-sm'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-sm'
-      "
-    >
+    <!-- content -->
+    <div class="flex-1 min-w-0" :class="isUser ? 'flex justify-end' : ''">
       <div
-        v-if="isLoading && !content"
-        class="flex items-center gap-1 py-1"
+        class="inline-block max-w-full rounded-2xl px-4 py-3"
+        :class="
+          isUser
+            ? 'bg-primary-500 text-white rounded-tr-sm'
+            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-tl-sm'
+        "
       >
-        <span class="typing-dot" />
-        <span class="typing-dot animation-delay-200" />
-        <span class="typing-dot animation-delay-400" />
+        <!-- loading state -->
+        <div v-if="isLoading && !content" class="flex items-center gap-1.5 py-0.5">
+          <span class="loading-dot" />
+          <span class="loading-dot" style="animation-delay: 0.15s" />
+          <span class="loading-dot" style="animation-delay: 0.3s" />
+        </div>
+
+        <!-- message content -->
+        <div
+          v-else
+          class="prose prose-sm max-w-none break-words"
+          :class="isUser ? 'prose-invert' : 'dark:prose-invert'"
+          v-html="renderContent(content)"
+        />
       </div>
-      <div
-        v-else
-        class="message-content prose prose-sm dark:prose-invert max-w-none"
-        :class="isUser ? 'prose-invert' : ''"
-        v-html="convertToHtml(content)"
-      />
     </div>
   </div>
 </template>
@@ -56,122 +55,126 @@ const converter = new showdown.Converter({
   ghCodeBlocks: true,
   tasklists: true,
   strikethrough: true,
+  simpleLineBreaks: true,
 });
 
-function convertToHtml(text: string) {
+function renderContent(text: string) {
+  if (!text) return "";
   return converter.makeHtml(text);
 }
 </script>
 
 <style>
-.message-appear {
-  animation: messageSlideIn 0.3s ease-out;
-}
-
-@keyframes messageSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.typing-dot {
-  width: 8px;
-  height: 8px;
-  background-color: currentColor;
+.loading-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
   border-radius: 50%;
-  opacity: 0.6;
-  animation: typingBounce 1.4s infinite ease-in-out both;
+  opacity: 0.4;
+  animation: loadingPulse 1s ease-in-out infinite;
 }
 
-.animation-delay-200 {
-  animation-delay: 0.2s;
-}
-
-.animation-delay-400 {
-  animation-delay: 0.4s;
-}
-
-@keyframes typingBounce {
-  0%, 80%, 100% {
-    transform: scale(0.6);
+@keyframes loadingPulse {
+  0%, 100% {
     opacity: 0.4;
+    transform: scale(0.8);
   }
-  40% {
-    transform: scale(1);
+  50% {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
-.message-content p {
+/* prose overrides */
+.prose p {
   margin: 0;
 }
 
-.message-content p + p {
-  margin-top: 0.75rem;
+.prose p + p {
+  margin-top: 0.75em;
 }
 
-.message-content pre {
-  background: rgba(0, 0, 0, 0.15);
-  padding: 1rem;
+.prose pre {
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 0.5rem;
+  padding: 0.875rem;
+  margin: 0.75em 0;
   overflow-x: auto;
-  margin: 0.75rem 0;
 }
 
-.message-content :not(pre) > code {
-  background: rgba(0, 0, 0, 0.1);
+.dark .prose pre {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.prose :not(pre) > code {
+  background: rgba(0, 0, 0, 0.06);
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   font-size: 0.875em;
+  font-weight: 500;
 }
 
-.message-content code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem;
+.dark .prose :not(pre) > code {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.message-content ul,
-.message-content ol {
-  margin: 0.5rem 0;
-  padding-left: 1.5rem;
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
 }
 
-.message-content li {
-  margin: 0.25rem 0;
+.prose ul,
+.prose ol {
+  margin: 0.5em 0;
+  padding-left: 1.25em;
 }
 
-.message-content blockquote {
-  border-left: 3px solid currentColor;
+.prose li {
+  margin: 0.25em 0;
+}
+
+.prose blockquote {
+  border-left: 2px solid currentColor;
   opacity: 0.8;
-  padding-left: 1rem;
-  margin: 0.75rem 0;
+  padding-left: 1em;
+  margin: 0.75em 0;
+  font-style: italic;
 }
 
-.message-content a {
+.prose a {
   text-decoration: underline;
   text-underline-offset: 2px;
+  opacity: 0.9;
 }
 
-.message-content table {
+.prose a:hover {
+  opacity: 1;
+}
+
+.prose hr {
+  border-color: currentColor;
+  opacity: 0.2;
+  margin: 1em 0;
+}
+
+.prose table {
   border-collapse: collapse;
-  margin: 0.75rem 0;
-  width: 100%;
+  margin: 0.75em 0;
+  font-size: 0.875em;
 }
 
-.message-content th,
-.message-content td {
+.prose th,
+.prose td {
   border: 1px solid currentColor;
-  opacity: 0.3;
-  padding: 0.5rem;
-  text-align: left;
+  border-color: rgba(128, 128, 128, 0.3);
+  padding: 0.5em 0.75em;
 }
 
-.message-content th {
+.prose th {
   font-weight: 600;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .prose th {
+  background: rgba(255, 255, 255, 0.04);
 }
 </style>

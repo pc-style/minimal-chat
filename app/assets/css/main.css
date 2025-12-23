@@ -1,12 +1,16 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* smooth scrolling globally */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 html {
   scroll-behavior: smooth;
 }
 
-/* custom scrollbar */
+/* minimal scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -17,41 +21,48 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.6);
+  background: rgba(0, 0, 0, 0.25);
 }
 
-/* dark mode scrollbar */
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.4);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.6);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* focus visible for accessibility */
+/* focus ring */
 *:focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
 }
 
-/* textarea custom styling */
+/* selection */
+::selection {
+  background-color: var(--color-primary-500);
+  color: white;
+}
+
+/* textarea */
 textarea {
   scrollbar-width: thin;
 }
 
-/* selection styling */
-::selection {
-  background-color: var(--color-primary-200);
-  color: var(--color-primary-900);
+textarea::-webkit-scrollbar {
+  width: 4px;
 }
 
-.dark ::selection {
-  background-color: var(--color-primary-800);
-  color: var(--color-primary-100);
+/* smooth transitions for color mode */
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
