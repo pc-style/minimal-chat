@@ -1,61 +1,86 @@
 <template>
   <UModal v-model:open="isOpen">
     <template #content>
-      <div class="p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg font-medium">Settings</h2>
+      <div class="px-8 py-7 bg-white dark:bg-neutral-900 overflow-hidden">
+        <div class="flex items-center justify-between mb-8">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+              <UIcon name="i-lucide-settings-2" class="text-xl text-neutral-600 dark:text-neutral-400" />
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-neutral-900 dark:text-white leading-none">Settings</h2>
+              <p class="text-[12px] text-neutral-500 dark:text-neutral-500 mt-1">Personalize your chat experience</p>
+            </div>
+          </div>
           <UButton
             icon="i-lucide-x"
             color="neutral"
             variant="ghost"
-            size="sm"
+            class="rounded-xl"
             @click="isOpen = false"
           />
         </div>
 
-        <div class="space-y-6">
+        <div class="space-y-8">
           <!-- theme -->
-          <div>
-            <label class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3 block">
-              Theme
-            </label>
-            <div class="grid grid-cols-3 gap-2">
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-palette" class="text-sm text-neutral-400" />
+              <label class="text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                Appearance
+              </label>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
               <button
                 v-for="option in themeOptions"
                 :key="option.value"
-                class="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all"
+                class="flex flex-col items-center gap-2.5 p-4 rounded-2xl border-2 transition-all group relative overflow-hidden"
                 :class="
                   colorMode.preference === option.value
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-950'
-                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                    ? 'border-primary-500 bg-primary-500/5 dark:bg-primary-500/10'
+                    : 'border-neutral-100 dark:border-neutral-800 hover:border-neutral-200 dark:hover:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/30 font-medium text-neutral-500 dark:text-neutral-400'
                 "
                 @click="colorMode.preference = option.value"
               >
-                <UIcon :name="option.icon" class="text-xl" />
-                <span class="text-xs font-medium">{{ option.label }}</span>
+                <UIcon :name="option.icon" class="text-xl" :class="colorMode.preference === option.value ? 'text-primary-500' : ''" />
+                <span class="text-[13px] font-semibold" :class="colorMode.preference === option.value ? 'text-primary-600 dark:text-primary-400' : ''">{{ option.label }}</span>
+                <div v-if="colorMode.preference === option.value" class="absolute top-2 right-2 flex w-2 h-2 rounded-full bg-primary-500" />
               </button>
             </div>
           </div>
 
           <!-- accent color -->
-          <div>
-            <label class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3 block">
-              Accent Color
-            </label>
-            <div class="flex gap-2 flex-wrap">
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-sparkles" class="text-sm text-neutral-400" />
+              <label class="text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                Accent Color
+              </label>
+            </div>
+            <div class="flex gap-4 px-1">
               <button
                 v-for="color in accentColors"
                 :key="color.name"
-                class="w-8 h-8 rounded-full transition-transform hover:scale-110 ring-2 ring-offset-2 ring-offset-white dark:ring-offset-neutral-900"
+                class="w-8 h-8 rounded-full transition-all hover:scale-125 ring-offset-4 ring-offset-white dark:ring-offset-neutral-900 border-2 border-white dark:border-neutral-800 shadow-sm"
                 :class="[
                   color.class,
-                  selectedAccent === color.name ? 'ring-neutral-900 dark:ring-white' : 'ring-transparent'
+                  selectedAccent === color.name ? 'ring-2 ring-primary-500 scale-110 shadow-lg' : 'hover:shadow-md'
                 ]"
                 :title="color.name"
                 @click="setAccentColor(color.name)"
               />
             </div>
           </div>
+        </div>
+
+        <div class="mt-10 pt-6 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
+          <UButton
+            label="Done"
+            color="primary"
+            size="md"
+            class="px-8 font-bold rounded-xl shadow-lg shadow-primary-500/20"
+            @click="isOpen = false"
+          />
         </div>
       </div>
     </template>
@@ -73,7 +98,7 @@ const themeOptions = [
 ];
 
 const accentColors = [
-  { name: "green", class: "bg-green-500" },
+  { name: "green", class: "bg-emerald-500" },
   { name: "blue", class: "bg-blue-500" },
   { name: "violet", class: "bg-violet-500" },
   { name: "rose", class: "bg-rose-500" },
