@@ -1,60 +1,66 @@
-#  Minimal Chat (Apple Intelligence Edition)
+# Apple Minimal Chat
 
-A premium, high-performance chat interface inspired by Apple Intelligence. Built with Nuxt 4, Tailwind CSS, and Shiki.
+A clean chat interface that feels right at home on your Mac. Built with Nuxt 4, Tailwind CSS, and Shiki.
 
-## ✨ Premium Features
+## Features
 
-- **Modern Apple-Inspired UI**: Beautiful glassmorphism, smooth animations, and curated typography.
-- **Smart Message Queuing**: Send multiple prompts in rapid succession; the app handles them sequentially.
-- **Abort/Stop Response**: Instantly halt model generation with a dedicated stop button and AbortController integration.
-- **Advanced Markdown & Shiki**: High-quality syntax highlighting for code blocks with language indicators and Light/Dark mode support.
-- **Inline Chat Renaming**: Rename your conversations directly in the sidebar with a single click.
-- **Dynamic Accent Colors**: 6 handcrafted color presets (Emerald, Blue, Violet, Rose, Orange, Cyan).
-- **Auto-Naming**: Conversations are automatically renamed based on your first prompt.
+It's got all the good stuff:
 
-## 🚀 Quality of Life (QoL) Improvements
+- **Apple Style UI**: Looks just like the apps you use every day with glass effects and smooth animations.
+- **Smart Queue**: Send a bunch of messages at once and let it handle them one by one.
+- **Stop Button**: Stop the AI if it starts rambling.
+- **Code Highlighting**: Code blocks look great in both light and dark mode.
+- **Renaming**: Click to rename chats in the sidebar.
+- **Colors**: Pick from 6 different accent colors to match your vibe.
+- **Auto Titles**: It names your chats based on what you talk about.
 
-1.  **Sidebar Search**: Instantly filter through your conversation history.
-2.  **Compact Sidebar Mode**: Toggle between detailed and compact views for the chat list.
-3.  **Adjustable Font Size**: Fine-tune the message text size (12px to 20px) for maximum comfort.
-4.  **Message Timestamps**: Optional timestamps for every message in the conversation.
-5.  **Scroll-to-Bottom Button**: A floating button that appears when you're caught up in history.
-6.  **Message Hover Actions**: Quick actions (Copy, Retry) available on every message.
-7.  **Smart Keyboard Shortcuts**:
-    - `⌘ + K`: Clear current conversation history.
-    - `⌘ + N`: Create a new conversation.
-    - `⌘ + Enter`: Send message.
-8.  **Pulsing Status Indicators**: Visual feedback when the AI is "Thinking" or when the logo is active.
-9.  **Premium Code Blocks**: Featuring "Copy to Clipboard" with immediate visual feedback.
-10. **Enhanced Focus States**: Fixed "square ring" issues; focus rings now inherit border-radius for a seamless look.
-11. **Responsive Textarea**: Auto-resizing input field that grows with your thoughts.
-12. **Markdown LaTeX Support Preview**: Clean rendering for mathematical expressions.
-13. **Drag & Drop Visual Support**: Ready for future file attachment integration.
-14. **High-Fidelity Typography**: Optimized for subpixel antialiasing and modern font features.
-15. **Offline Resiliency**: Better error handling and visual cues when the API is unreachable.
+## Nice to Haves
 
-## 🛠 Tech Stack
+1.  **Search**: Find old conversations quickly.
+2.  **Compact Mode**: Switch to a smaller sidebar if you want more space.
+3.  **Font Size**: Make the text bigger or smaller.
+4.  **Timestamps**: See when messages were sent.
+5.  **Scroll Button**: Jump back to the latest message.
+6.  **Copy**: Easily copy prompts or responses.
+7.  **Shortcuts**:
+    - `Cmd + K`: Clear chat
+    - `Cmd + N`: New chat
+    - `Cmd + Enter`: Send message
+8.  **Status**: See when it's thinking.
+9.  **Copy Code**: One click to copy code snippets.
+10. **Focus Rings**: Everything looks polished.
+11. **Auto Resize**: The input box grows as you type.
+12. **Math Support**: Renders math equations nicely.
+13. **Drag & Drop**: Ready for files when you need it.
+14. **Typography**: Text looks crisp on high res screens.
+15. **Offline Config**: Handles it gracefully if the internet drops.
+
+## Tech Stack
 
 - **Framework**: [Nuxt 4](https://nuxt.com/)
-- **UI & Icons**: [Nuxt UI](https://ui.nuxt.com/) & [Lucide](https://lucide.dev/)
+- **UI**: [Nuxt UI](https://ui.nuxt.com/) & [Lucide](https://lucide.dev/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Markdown**: [markdown-it](https://github.com/markdown-it/markdown-it)
-- **Syntax Highlighting**: [Shiki](https://shiki.style/)
+- **Highlighter**: [Shiki](https://shiki.style/)
 - **Database**: [Drizzle ORM](https://orm.drizzle.team/) & [SQLite](https://www.sqlite.org/)
 
-## 🚀 Getting Started
+## Getting Started
 
 ```bash
-# Install dependencies
+# Install stuff
 bun install
 
-# Run development server
+# Start it up
 bun dev
 
-# Build for production
+# Build it
 bun run build
 ```
 
-## 📜 License
+**Debugging**
+
+If you run into issues, you can enable debug logs by setting `DEBUG=true` in your `.env` file. Check out `.env.example` to see how it's done.
+
+## License
 
 MIT

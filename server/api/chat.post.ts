@@ -33,7 +33,15 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  console.log("Chat handler started, chatId:", chatId);
+  const debug = process.env.DEBUG === 'true';
+  const debugLog = (...args: any[]) => {
+    if (debug) console.log(...args);
+  };
+  const debugError = (...args: any[]) => {
+    if (debug) console.error(...args);
+  };
+
+  debugLog("Chat handler started, chatId:", chatId);
 
   // call apple intelligence api
   const response = await fetch("http://localhost:8080/api/v1/chat/completions", {
@@ -46,7 +54,7 @@ export default defineEventHandler(async (event) => {
     }),
   });
 
-  console.log("Apple Intelligence API response status:", response.status);
+  debugLog("Apple Intelligence API response status:", response.status);
 
   if (!response.ok) {
     throw createError({ statusCode: response.status, message: "API error" });
@@ -59,10 +67,10 @@ export default defineEventHandler(async (event) => {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      console.log("ReadableStream start");
+      debugLog("ReadableStream start");
       const reader = response.body?.getReader();
       if (!reader) {
-        console.error("No reader for response body");
+        debugError("No reader for response body");
         controller.close();
         return;
       }
@@ -74,12 +82,12 @@ export default defineEventHandler(async (event) => {
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            console.log("Backend reader done");
+            debugLog("Backend reader done");
             break;
           }
 
           const decodedValue = decoder.decode(value, { stream: true });
-          console.log("Backend received value part:", decodedValue);
+          debugLog("Backend received value part:", decodedValue);
           buffer += decodedValue;
 
           // process complete lines
@@ -91,7 +99,7 @@ export default defineEventHandler(async (event) => {
             if (line.startsWith("data:")) {
               const data = line.startsWith("data: ") ? line.slice(6) : line.slice(5);
               if (data === "[DONE]") {
-                console.log("Backend received [DONE]");
+                debugLog("Backend received [DONE]");
                 continue;
               }
 
@@ -99,12 +107,12 @@ export default defineEventHandler(async (event) => {
                 const parsed = JSON.parse(data);
                 const content = parsed.choices?.[0]?.delta?.content;
                 if (content !== undefined && content !== null) {
-                  console.log("Enqueuing content:", content);
+                  debugLog("Enqueuing content:", content);
                   fullResponse += content;
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
                 }
               } catch (e) {
-                console.error("Backend JSON parse error for data:", data, e);
+                debugError("Backend JSON parse error for data:", data, e);
               }
             }
           }
@@ -112,7 +120,7 @@ export default defineEventHandler(async (event) => {
 
         // save assistant response
         if (chatId && fullResponse) {
-          console.log("Saving assistant response, length:", fullResponse.length);
+          debugLog("Saving assistant response, length:", fullResponse.length);
           await db.insert(messagesTable).values({
             id: crypto.randomUUID(),
             chatId,
@@ -121,11 +129,11 @@ export default defineEventHandler(async (event) => {
           });
         }
 
-        console.log("Closing controller");
+        debugLog("Closing controller");
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (e) {
-        console.error("Stream catch error:", e);
+        debugError("Stream catch error:", e);
         controller.error(e);
       }
     },

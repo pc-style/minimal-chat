@@ -206,6 +206,17 @@ const messagesContainer = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLTextAreaElement | null>(null);
 const showScrollButton = ref(false);
 
+const config = useRuntimeConfig();
+const debugLog = (...args: any[]) => {
+  if (config.public.debug) console.log(...args);
+};
+const debugError = (...args: any[]) => {
+  if (config.public.debug) console.error(...args);
+};
+const debugWarn = (...args: any[]) => {
+  if (config.public.debug) console.warn(...args);
+};
+
 const fontSize = useState("chatFontSize", () => 15);
 const showTimestamps = useState("showTimestamps", () => true);
 const useSmartLabeling = useState("useSmartLabeling", () => false);
@@ -251,7 +262,7 @@ async function loadMessages() {
     messages.value = data.messages.filter((m) => m.role === "user" || m.role === "assistant");
     scrollToBottom();
   } catch (e) {
-    console.error("Failed to load messages", e);
+    debugError("Failed to load messages", e);
   }
 }
 
@@ -327,7 +338,7 @@ async function processMessage(userMessage: string) {
       signal: abortController.value.signal,
     });
 
-    console.log("Fetch response received:", response.status);
+    debugLog("Got fetch response:", response.status);
 
     if (!response.ok) {
         throw new Error(`Server returned ${response.status}: AI service unavailable.`);
@@ -342,12 +353,12 @@ async function processMessage(userMessage: string) {
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
-        console.log("Stream reader done");
+        debugLog("Reader finished successfully");
         break;
       }
 
       const chunk = decoder.decode(value, { stream: true });
-      console.log("Received chunk:", chunk);
+      debugLog("Found new chunk:", chunk);
       buffer += chunk;
       let lines = buffer.split("\n");
       buffer = lines.pop() || "";
@@ -356,29 +367,29 @@ async function processMessage(userMessage: string) {
         const cleaned = line.trim();
         if (!cleaned) continue;
         if (!cleaned.startsWith("data:")) {
-          console.log("Line skipped (no data: prefix):", cleaned);
+          debugLog("Skipping line with no data prefix:", cleaned);
           continue;
         }
         const data = cleaned.startsWith("data: ") ? cleaned.slice(6) : cleaned.slice(5);
         if (data === "[DONE]") {
-          console.log("Received [DONE]");
+          debugLog("Received DONE signal");
           continue;
         }
 
         try {
           const parsed = JSON.parse(data);
           const delta = parsed.content || ""; 
-          console.log("Parsed delta:", delta);
+          debugLog("Parsed data chunk:", delta);
           if (messages.value[assistantIndex] && messages.value[assistantIndex].role === 'assistant') {
             messages.value[assistantIndex].content += delta;
-            console.log("Message updated at index", assistantIndex, "new length:", messages.value[assistantIndex].content.length);
+            debugLog("Updated message at index", assistantIndex, "new length is", messages.value[assistantIndex].content.length);
             scrollToBottom();
           } else {
             const currentMsg = messages.value[assistantIndex];
-            console.warn("Could not find assistant message at index", assistantIndex, "current role:", currentMsg?.role);
+            debugWarn("Whoops, couldn't find assistant message at index", assistantIndex, "current role is", currentMsg?.role);
           }
         } catch (e) {
-          console.error("Failed to parse JSON from data chunk:", data, e);
+          debugError("Failed to parse JSON from data chunk:", data, e);
         }
       }
     }
@@ -396,13 +407,13 @@ async function processMessage(userMessage: string) {
   } catch (err: any) {
     if (err.name === "AbortError") {
       if (messages.value[assistantIndex]) {
-        messages.value[assistantIndex].content += "\n\n*Generation interrupted.*";
+        messages.value[assistantIndex].content += "\n\n*Generation was stopped.*";
       }
     } else {
       if (messages.value[assistantIndex]) {
-        messages.value[assistantIndex].content = "⚠️ **An error occurred:** " + (err.message || "Unknown error");
+        messages.value[assistantIndex].content = "⚠️ **Something went wrong:** " + (err.message || "Unknown error");
       } else {
-        messages.value.push({ role: "error", content: "⚠️ **An error occurred:** " + (err.message || "Unknown error") });
+        messages.value.push({ role: "error", content: "⚠️ **Something went wrong:** " + (err.message || "Unknown error") });
       }
     }
   } finally {
