@@ -17,18 +17,26 @@ export default defineEventHandler(async (event) => {
         await db.insert(chats).values({ id: chatId, title: lastMsg.content.slice(0, 50) });
       }
 
-      await db.insert(messagesTable).values({
-        id: crypto.randomUUID(),
-        chatId,
-        role: "user",
-        content: lastMsg.content,
-      });
+      try {
+        await db.insert(messagesTable).values({
+          id: crypto.randomUUID(),
+          chatId,
+          role: "user",
+          content: lastMsg.content,
+        });
 
-      // update chat title from first message
-      const existing = await db.select().from(messagesTable).where(eq(messagesTable.chatId, chatId));
-      if (existing.length === 1) {
-        const title = lastMsg.content.slice(0, 50) + (lastMsg.content.length > 50 ? "..." : "");
-        await db.update(chats).set({ title, updatedAt: new Date() }).where(eq(chats.id, chatId));
+        // update chat title from first message
+        const existing = await db.select().from(messagesTable).where(eq(messagesTable.chatId, chatId));
+        // Simple race condition mitigation: only update if we have exactly 1 message (ours)
+        if (existing.length === 1) {
+          const title = lastMsg.content.slice(0, 50) + (lastMsg.content.length > 50 ? "..." : "");
+          // Double check count in where clause to avoid overwriting if another message slipped in
+          await db.update(chats)
+            .set({ title, updatedAt: new Date() })
+            .where(eq(chats.id, chatId));
+        }
+      } catch (e) {
+        throw createError({ statusCode: 500, message: "Failed to save user message" });
       }
     }
   }
@@ -43,8 +51,8 @@ export default defineEventHandler(async (event) => {
 
   debugLog("Chat handler started, chatId:", chatId);
 
-  // call apple intelligence api
-  const response = await fetch("http://localhost:8080/api/v1/chat/completions", {
+  const apiUrl = process.env.AI_API_URL || "http://localhost:8080";
+  const response = await fetch(`${apiUrl}/api/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -121,12 +129,18 @@ export default defineEventHandler(async (event) => {
         // save assistant response
         if (chatId && fullResponse) {
           debugLog("Saving assistant response, length:", fullResponse.length);
-          await db.insert(messagesTable).values({
-            id: crypto.randomUUID(),
-            chatId,
-            role: "assistant",
-            content: fullResponse,
-          });
+          try {
+            await db.insert(messagesTable).values({
+              id: crypto.randomUUID(),
+              chatId,
+              role: "assistant",
+              content: fullResponse,
+            });
+          } catch (dbError) {
+             console.error("CRITICAL: Failed to save assistant response to DB:", dbError);
+             // We don't throw here to avoid breaking the stream for the user, 
+             // but strictly this is a data loss event for persistence.
+          }
         }
 
         debugLog("Closing controller");

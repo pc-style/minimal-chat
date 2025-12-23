@@ -13,7 +13,7 @@ export async function initHighlighter() {
 }
 
 const md = new MarkdownIt({
-  html: true,
+  html: false,
   linkify: true,
   typographer: true,
   highlight: (code, lang) => {
