@@ -3,11 +3,14 @@
     <!-- avatar -->
     <div
       class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm transition-transform group-hover/message:scale-105"
-      :class="isUser ? 'bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800' : 'bg-gradient-to-br from-primary-500 to-primary-600'"
+      :class="[
+        isUser ? 'bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800' : 'bg-gradient-to-br from-primary-500 to-primary-600',
+        role === 'error' ? 'from-rose-500 to-rose-600 !bg-gradient-to-br' : ''
+      ]"
     >
       <UIcon
-        :name="isUser ? 'i-lucide-user' : 'i-lucide-sparkles'"
-        :class="isUser ? 'text-neutral-600 dark:text-neutral-300' : 'text-white'"
+        :name="role === 'error' ? 'i-lucide-alert-circle' : (isUser ? 'i-lucide-user' : 'i-lucide-sparkles')"
+        :class="isUser && role !== 'error' ? 'text-neutral-600 dark:text-neutral-300' : 'text-white'"
         class="text-base"
       />
     </div>
@@ -16,11 +19,12 @@
     <div class="flex-1 min-w-0 relative" :class="isUser ? 'flex flex-col items-end' : 'flex flex-col items-start'">
       <div
         class="inline-block max-w-full rounded-2xl px-5 py-3.5 shadow-sm transition-all group/bubble relative"
-        :class="
+        :class="[
           isUser
             ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-tr-none'
-            : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 text-neutral-900 dark:text-neutral-100 rounded-tl-none hover:shadow-md'
-        "
+            : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 text-neutral-900 dark:text-neutral-100 rounded-tl-none hover:shadow-md',
+          role === 'error' ? 'border-rose-500/50 dark:border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400' : ''
+        ]"
         :style="{ fontSize: `${fontSize}px` }"
       >
         <!-- loading state -->
@@ -76,6 +80,7 @@ import { initHighlighter, renderMarkdown } from '~/utils/markdown';
 const props = defineProps<{
   isUser: boolean;
   content: string;
+  role?: "user" | "assistant" | "error";
   isLoading?: boolean;
   fontSize?: number;
   showTimestamp?: boolean;

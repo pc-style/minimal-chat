@@ -141,10 +141,6 @@
           @clear="clearCurrentChat"
           @saved="onChatSaved"
         />
-        <div v-else class="flex-1 flex items-center justify-center">
-           <!-- Fallback if somehow nothing is active -->
-           <UButton label="New Chat" @click="createNewChat" />
-        </div>
       </main>
 
       <!-- modals -->

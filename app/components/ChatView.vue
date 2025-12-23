@@ -21,40 +21,48 @@
           color="neutral"
           variant="ghost"
           icon="i-lucide-trash-2"
+          title="Clear Conversation"
           @click="clearChat"
         />
       </div>
     </header>
 
-    <!-- messages -->
+    <!-- messages container -->
     <div ref="messagesContainer" class="flex-1 overflow-y-auto scroll-smooth">
       <div class="max-w-3xl mx-auto py-10 px-6">
         <!-- empty state for this chat -->
         <div v-if="messages.length === 0 && !isLoading" class="flex flex-col items-center justify-center py-12 text-center animate-slide-up">
           <div
-            class="w-20 h-20 mx-auto rounded-[2rem] bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-2xl shadow-primary-500/40 ring-8 ring-primary-500/10 mb-8"
+            class="w-20 h-20 mx-auto rounded-[2rem] bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-2xl shadow-primary-500/40 ring-8 ring-primary-500/10 mb-8 relative"
           >
-            <span class="text-white font-black italic tracking-tighter text-3xl select-none">AI</span>
+            <div class="absolute inset-0 bg-white/10 rounded-[2rem] blur-xl opacity-50" />
+            <span class="text-white font-black italic tracking-tighter text-3xl select-none relative z-10 uppercase">AI</span>
           </div>
 
-          <h3 class="text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight mb-4">
-            How can I help you today?
+          <h3 class="text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight mb-3">
+            What can we create today?
           </h3>
-          <p class="text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-12">
-            I'm Apple Intelligence. I can help you write, code, brainstorm, and more.
+          <p class="text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-10 font-medium text-[14px]">
+            Choose a creative prompt or start typing your own idea below.
           </p>
 
-          <div class="grid grid-cols-2 gap-3 w-full max-w-2xl mx-auto">
+          <div class="grid grid-cols-2 gap-4 w-full max-w-2xl mx-auto">
             <button
-              v-for="card in promptCards"
+              v-for="card in creativePrompts"
               :key="card.text"
-              class="flex flex-col items-center p-6 text-center rounded-2xl bg-white dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-xl hover:border-primary-500/50 transition-all group active:scale-[0.98]"
+              class="flex flex-col items-center p-6 text-center rounded-[2rem] bg-white dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800 shadow-sm hover:shadow-2xl transition-all duration-500 group scale-100 hover:scale-[1.03] active:scale-[0.98] backdrop-blur-md relative overflow-hidden"
               @click="sendInitialPrompt(card.text)"
             >
-              <div class="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center mb-3 group-hover:bg-primary-500/10 transition-colors">
-                <UIcon :name="card.icon" class="text-xl text-neutral-400 group-hover:text-primary-500" />
+              <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br" :class="card.bgGradient" />
+              
+              <div class="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-inner relative z-10">
+                <UIcon
+                  :name="card.icon"
+                  class="text-2xl transition-colors duration-500"
+                  :class="['text-neutral-400', card.iconColor]"
+                />
               </div>
-              <p class="text-[13px] font-bold text-neutral-800 dark:text-neutral-200">{{ card.text }}</p>
+              <p class="text-[14px] font-bold tracking-tight text-neutral-800 dark:text-neutral-100 relative z-10 transition-colors duration-500 group-hover:text-white">{{ card.text }}</p>
             </button>
           </div>
         </div>
@@ -66,6 +74,7 @@
               v-for="(msg, i) in messages"
               :key="i"
               :is-user="msg.role === 'user'"
+              :role="msg.role"
               :content="msg.content"
               :is-loading="isLoading && i === messages.length - 1 && msg.role === 'assistant'"
               :font-size="fontSize"
@@ -91,83 +100,71 @@
     <!-- input area -->
     <div class="p-6">
       <div class="max-w-3xl mx-auto">
-        <!-- Message Queue Indicator -->
-        <!-- queue indicator -->
-      <div v-if="messageQueue.length > 0" class="max-w-3xl mx-auto px-6 mb-4">
-        <div class="flex flex-col gap-2">
+        <!-- Editable Queue -->
+        <div v-if="messageQueue.length > 0" class="mb-4 space-y-2 animate-slide-up">
+          <div class="flex items-center justify-between px-2 mb-1">
+            <span class="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">Scheduled Actions</span>
+            <button @click="messageQueue = []" class="text-[10px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-tight">Clear All</button>
+          </div>
           <div 
             v-for="(queuedMsg, idx) in messageQueue" 
             :key="idx"
-            class="group relative flex items-center justify-between gap-4 p-3 pr-4 rounded-xl bg-neutral-100/50 dark:bg-neutral-800/50 border border-neutral-200/50 dark:border-neutral-700/50 animate-slide-up"
+            class="group relative flex items-center justify-between gap-4 p-3 pr-4 rounded-xl bg-neutral-100/50 dark:bg-neutral-800/50 border border-neutral-200/50 dark:border-neutral-700/50 transition-all"
           >
-            <div class="flex items-center gap-3 overflow-hidden">
-              <div class="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-neutral-500">
+            <div class="flex items-center gap-3 overflow-hidden flex-1">
+              <div class="flex-shrink-0 w-6 h-6 rounded-lg bg-primary-500/10 flex items-center justify-center text-[10px] font-black text-primary-600 dark:text-primary-400">
                 {{ idx + 1 }}
               </div>
               <input 
                 v-model="messageQueue[idx]"
-                class="bg-transparent border-none focus:ring-0 text-[13px] text-neutral-600 dark:text-neutral-400 w-full truncate"
+                class="bg-transparent border-none focus:ring-0 text-[13px] text-neutral-600 dark:text-neutral-400 w-full truncate focus:text-neutral-900 dark:focus:text-white"
+                placeholder="Edit message..."
               />
             </div>
-            <button 
-              @click="removeFromQueue(idx)"
-              class="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-all"
-            >
-              <UIcon name="i-lucide-x" class="text-xs" />
-            </button>
-          </div>
-          <div class="flex items-center justify-between px-2">
-            <span class="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">Messages in Queue</span>
-            <button 
-              @click="messageQueue = []"
-              class="text-[10px] font-bold text-rose-500 hover:text-rose-600 transition-colors"
-            >
-              Clear Queue
+            <button @click="removeFromQueue(idx)" class="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-500/10 rounded-lg text-rose-500 transition-all">
+              <UIcon name="i-lucide-trash-2" class="text-xs" />
             </button>
           </div>
         </div>
-      </div>
-        </Transition>
 
+        <!-- Input Box -->
         <div 
-          class="relative group transition-all duration-300 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 shadow-sm focus-within:shadow-xl focus-within:border-primary-500/50 dark:focus-within:border-primary-400/30 ring-0 focus-within:ring-4 focus-within:ring-primary-500/10"
+          class="relative group transition-all duration-300 rounded-3xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 shadow-sm focus-within:shadow-2xl focus-within:border-primary-500/50 dark:focus-within:border-primary-400/30 ring-0 focus-within:ring-4 focus-within:ring-primary-500/10"
         >
           <textarea
             ref="inputRef"
             v-model="input"
             rows="1"
             placeholder="Ask me anything..."
-            class="w-full resize-none bg-transparent px-5 py-4 pr-14 text-[15px] leading-relaxed placeholder:text-neutral-400 focus:outline-none transition-all"
+            class="w-full resize-none bg-transparent px-6 py-5 pr-14 text-[15px] leading-relaxed placeholder:text-neutral-400 focus:outline-none transition-all font-medium"
             @input="autoResize"
             @keydown.enter.exact.prevent="sendMessage"
           />
           <div class="absolute right-3 bottom-3 flex items-center gap-2">
-            <!-- Stop Button -->
             <Transition name="fade">
               <button
                 v-if="isLoading"
-                class="flex items-center justify-center w-10 h-10 rounded-xl bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all scale-100 active:scale-95"
-                title="Stop generating"
+                class="flex items-center justify-center w-11 h-11 rounded-2xl bg-rose-500 text-white shadow-lg hover:bg-rose-600 transition-all scale-100 active:scale-95"
                 @click="stopGenerating"
               >
-                <UIcon name="i-lucide-square" class="text-sm fill-current" />
+                <UIcon name="i-lucide-square" class="text-base fill-current" />
               </button>
             </Transition>
 
-            <!-- Send Button -->
             <Transition name="fade">
               <button
-                v-if="input.trim()"
-                class="flex items-center justify-center w-10 h-10 rounded-xl transition-all shadow-lg bg-primary-500 text-white hover:bg-primary-600 scale-100 active:scale-95"
+                v-if="input.trim() || isLoading"
+                :disabled="!input.trim() && !isLoading"
+                class="flex items-center justify-center w-11 h-11 rounded-2xl transition-all shadow-lg bg-primary-500 text-white hover:bg-primary-600 scale-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 @click="sendMessage"
               >
-                <UIcon name="i-lucide-arrow-up" class="text-xl" />
+                <UIcon name="i-lucide-arrow-up" class="text-2xl" />
               </button>
             </Transition>
           </div>
         </div>
-        <p class="text-[11px] text-neutral-400 dark:text-neutral-500 text-center mt-3 tracking-wide flex items-center justify-center gap-2">
-          <span>AI can make mistakes. Consider checking important information.</span>
+        <p class="text-[11px] text-neutral-400 dark:text-neutral-500 text-center mt-4 tracking-wide flex items-center justify-center gap-2 font-medium">
+          <span>AI can make mistakes.</span>
           <span class="opacity-30">•</span>
           <span><kbd class="font-sans opacity-60">⌘ + Enter</kbd> to send</span>
         </p>
@@ -178,7 +175,7 @@
 
 <script setup lang="ts">
 interface Message {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "error";
   content: string;
 }
 
@@ -202,6 +199,14 @@ const showScrollButton = ref(false);
 
 const fontSize = useState("chatFontSize", () => 15);
 const showTimestamps = useState("showTimestamps", () => true);
+const useSmartLabeling = useState("useSmartLabeling", () => false);
+
+const creativePrompts = [
+  { icon: "i-lucide-scroll-text", text: "Write a futuristic poem about robot love", iconColor: "text-blue-500", bgGradient: "from-blue-600/10 to-blue-400/10" },
+  { icon: "i-lucide-party-popper", text: "Plan a mystery-themed dinner party", iconColor: "text-rose-500", bgGradient: "from-rose-600/10 to-rose-400/10" },
+  { icon: "i-lucide-help-circle", text: "Explain coding using pizza metaphors", iconColor: "text-amber-500", bgGradient: "from-amber-600/10 to-amber-400/10" },
+  { icon: "i-lucide-clapperboard", text: "Pitch a sci-fi movie about time travel", iconColor: "text-emerald-500", bgGradient: "from-emerald-600/10 to-emerald-400/10" },
+];
 
 function handleScroll() {
   if (!messagesContainer.value) return;
@@ -236,8 +241,8 @@ async function loadMessages() {
     const data = await $fetch<{ messages: Message[] }>(`/api/chats/${props.chatId}`);
     messages.value = data.messages.filter((m) => m.role === "user" || m.role === "assistant");
     scrollToBottom();
-  } catch {
-    // new chat
+  } catch (e) {
+    console.error("Failed to load messages", e);
   }
 }
 
@@ -251,7 +256,6 @@ function stopGenerating() {
   if (abortController.value) {
     abortController.value.abort();
     abortController.value = null;
-    isLoading.value = false;
   }
 }
 
@@ -259,32 +263,40 @@ function removeFromQueue(index: number) {
   messageQueue.value.splice(index, 1);
 }
 
+function sendInitialPrompt(text: string) {
+  input.value = text;
+  sendMessage();
+}
+
 async function sendMessage() {
-  if (!input.value.trim()) return;
+  if (!input.value.trim() && !isLoading.value) return;
 
   const content = input.value.trim();
-  input.value = "";
-  if (inputRef.value) {
-    inputRef.value.style.height = "auto";
-  }
+  if (content) {
+    input.value = "";
+    if (inputRef.value) inputRef.value.style.height = "auto";
 
-  if (isLoading.value) {
-    messageQueue.value.push(content);
-    return;
+    if (isLoading.value) {
+      messageQueue.value.push(content);
+      return;
+    }
+    await processMessage(content);
   }
-
-  await processMessage(content);
 }
 
 async function processMessage(userMessage: string) {
-  const useSmartLabeling = useState("useSmartLabeling", () => false);
   let currentId = props.chatId;
 
-  // Handle phantom chat creation
+  // 1. If it's a new chat, create it first
   if (currentId === "__new__") {
-    const chat = await $fetch<any>("/api/chats", { method: "POST" });
-    currentId = chat.id;
-    emit("saved", chat.id);
+    try {
+      const chat = await $fetch<any>("/api/chats", { method: "POST" });
+      currentId = chat.id;
+      // We don't emit yet, we keep using the local currentId to avoid re-keying the component mid-stream
+    } catch (e) {
+      messages.value.push({ role: "assistant", content: "❌ [System] Failed to initialize conversation database." });
+      return;
+    }
   }
 
   isLoading.value = true;
@@ -296,29 +308,22 @@ async function processMessage(userMessage: string) {
   abortController.value = new AbortController();
 
   try {
-    const response = await fetch(`/api/chats/${currentId}/messages`, {
-      method: "POST",
-      signal: abortController.value.signal,
-      body: JSON.stringify({ content: userMessage }),
-    });
-
-    // ... rest of stream logic ...
-
-  try {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chatId: props.chatId,
+        chatId: currentId,
         messages: messages.value.slice(0, -1),
       }),
       signal: abortController.value.signal,
     });
 
-    if (!response.ok) throw new Error("API error");
+    if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: AI service unavailable.`);
+    }
 
     const reader = response.body?.getReader();
-    if (!reader) throw new Error("No reader");
+    if (!reader) throw new Error("Connection failed: could not establish stream.");
 
     const decoder = new TextDecoder();
     let buffer = "";
@@ -328,90 +333,86 @@ async function processMessage(userMessage: string) {
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
+      let lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
-      let lineEnd;
-      while ((lineEnd = buffer.indexOf("\n")) !== -1) {
-        const line = buffer.slice(0, lineEnd).trim();
-        buffer = buffer.slice(lineEnd + 1);
+      for (const line of lines) {
+        const cleaned = line.trim();
+        if (!cleaned || !cleaned.startsWith("data: ")) continue;
+        const data = cleaned.slice(6);
+        if (data === "[DONE]") continue;
 
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          if (data === "[DONE]") continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              const assistantMsg = messages.value[assistantIndex];
-              if (parsed.content && assistantMsg) {
-                assistantMsg.content += parsed.content;
-                scrollToBottom();
-              }
-            } catch {
-              // ignore parse errors
-            }
-        }
+        try {
+          const parsed = JSON.parse(data);
+          const delta = parsed.content || ""; // Backend uses { content } not delta in our simple mock
+          if (messages.value[assistantIndex] && messages.value[assistantIndex].role === 'assistant') {
+            messages.value[assistantIndex].content += delta;
+            scrollToBottom();
+          }
+        } catch (e) {}
       }
     }
-  } catch (e: any) {
-    if (e.name === 'AbortError') {
-      const assistantMsg = messages.value[assistantIndex];
-      if (assistantMsg) {
-        assistantMsg.content += " _(Interrupted)_";
+
+    // Naming logic
+    if (messages.value.length === 2) {
+      if (useSmartLabeling.value) {
+        await smartRename(userMessage, messages.value[assistantIndex].content, currentId);
+      } else {
+        await autoRename(userMessage, currentId);
+      }
+      // Only emit saved (to update sidebar and url) AFTER naming is attempted
+      emit("saved", currentId);
+    }
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      if (messages.value[assistantIndex]) {
+        messages.value[assistantIndex].content += "\n\n*Generation interrupted.*";
       }
     } else {
-      const assistantMsg = messages.value[assistantIndex];
-      if (assistantMsg) {
-        assistantMsg.content = "Something went wrong. Please try again.";
+      if (messages.value[assistantIndex]) {
+        messages.value[assistantIndex].content = "⚠️ **An error occurred:** " + (err.message || "Unknown error");
+      } else {
+        messages.value.push({ role: "error", content: "⚠️ **An error occurred:** " + (err.message || "Unknown error") });
       }
     }
-  }
+  } finally {
+    isLoading.value = false;
+    abortController.value = null;
 
-  isLoading.value = false;
-  abortController.value = null;
-
-  // Auto-rename if it's the first exchange
-  if (messages.value.length === 2) {
-    autoRename(userMessage);
-  }
-
-  // Process next message in queue if any
-  if (messageQueue.value.length > 0) {
-    const nextMessage = messageQueue.value.shift();
-    if (nextMessage) {
-      await processMessage(nextMessage);
+    if (messageQueue.value.length > 0) {
+      const nextMessage = messageQueue.value.shift();
+      if (nextMessage) await processMessage(nextMessage);
     }
   }
 }
 
-async function autoRename(prompt: string) {
-  const title = prompt.length > 40 ? prompt.substring(0, 37) + "..." : prompt;
-  await $fetch(`/api/chats/${props.chatId}`, {
-    method: "PATCH",
-    body: { title }
-  });
-  // Parent will reload chats if needed via some event or just let it be
+async function autoRename(prompt: string, id: string) {
+  const title = prompt.length > 30 ? prompt.substring(0, 27) + "..." : prompt;
+  await $fetch(`/api/chats/${id}`, { method: "PATCH", body: { title } });
+}
+
+async function smartRename(prompt: string, response: string, id: string) {
+  try {
+    // Simplified smart naming
+    await autoRename(prompt, id); 
+  } catch (e) {
+    await autoRename(prompt, id);
+  }
 }
 
 async function retryMessage(index: number) {
   if (isLoading.value) return;
-  
-  // Find the last user message before this assistant message
-  let lastUserMessage = "";
+  let lastUserMsg = "";
   for (let i = index; i >= 0; i--) {
-    const msg = messages.value[i];
-    if (msg?.role === 'user') {
-      lastUserMessage = msg.content;
+    if (messages.value[i]?.role === 'user') {
+      lastUserMsg = messages.value[i].content;
+      messages.value = messages.value.slice(0, i);
       break;
     }
   }
-  
-  if (lastUserMessage) {
-    // Remove all messages from this index onwards
-    messages.value = messages.value.slice(0, index);
-    await processMessage(lastUserMessage);
-  }
+  if (lastUserMsg) await processMessage(lastUserMsg);
 }
 
-// Keyboard shortcuts
 function handleGlobalKeydown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault();
@@ -419,80 +420,33 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-const initialPromptState = useState("initialPrompt", () => "");
-
-const promptCards = [
-  { icon: "i-lucide-code-2", text: "Help me write code" },
-  { icon: "i-lucide-palette", text: "Design something" },
-  { icon: "i-lucide-lightbulb", text: "Brainstorm ideas" },
-  { icon: "i-lucide-graduation-cap", text: "Explain concepts" },
-];
-
-async function sendInitialPrompt(text: string) {
-  input.value = text;
-  await sendMessage();
-}
-
 onMounted(async () => {
   await loadMessages();
-  if (messagesContainer.value) {
-    messagesContainer.value.addEventListener('scroll', handleScroll);
-  }
+  if (messagesContainer.value) messagesContainer.value.addEventListener('scroll', handleScroll);
   window.addEventListener('keydown', handleGlobalKeydown);
-
-  // Auto-send if redirected from empty state with a prompt
-  if (initialPromptState.value) {
-    const prompt = initialPromptState.value;
-    initialPromptState.value = "";
-    input.value = prompt;
-    await sendMessage();
+  
+  const initialPrompt = useState("initialPrompt", () => "");
+  if (initialPrompt.value) {
+    input.value = initialPrompt.value;
+    initialPrompt.value = "";
+    sendMessage();
   }
 });
 
 onUnmounted(() => {
   stopGenerating();
-  if (messagesContainer.value) {
-    messagesContainer.value.removeEventListener('scroll', handleScroll);
-  }
+  if (messagesContainer.value) messagesContainer.value.removeEventListener('scroll', handleScroll);
   window.removeEventListener('keydown', handleGlobalKeydown);
 });
 </script>
 
 <style>
-.message-enter-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.message-enter-from {
-  opacity: 0;
-  transform: translateY(20px) scale(0.98);
-}
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 10px;
-}
-.dark ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
-}
+.message-enter-active { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.message-enter-from { opacity: 0; transform: translateY(20px) scale(0.98); }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s, transform 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: scale(0.95); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
+.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); }
 </style>
