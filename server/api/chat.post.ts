@@ -11,6 +11,12 @@ export default defineEventHandler(async (event) => {
   if (chatId && userMessages.length > 0) {
     const lastMsg = userMessages[userMessages.length - 1];
     if (lastMsg.role === "user") {
+      // ensure chat exists (defensive check)
+      const chatExists = await db.select().from(chats).where(eq(chats.id, chatId)).limit(1);
+      if (chatExists.length === 0) {
+        await db.insert(chats).values({ id: chatId, title: lastMsg.content.slice(0, 50) });
+      }
+
       await db.insert(messagesTable).values({
         id: crypto.randomUUID(),
         chatId,
@@ -27,6 +33,8 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  console.log("Chat handler started, chatId:", chatId);
+
   // call apple intelligence api
   const response = await fetch("http://localhost:8080/api/v1/chat/completions", {
     method: "POST",
@@ -37,6 +45,8 @@ export default defineEventHandler(async (event) => {
       stream: true,
     }),
   });
+
+  console.log("Apple Intelligence API response status:", response.status);
 
   if (!response.ok) {
     throw createError({ statusCode: response.status, message: "API error" });
@@ -49,8 +59,10 @@ export default defineEventHandler(async (event) => {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      console.log("ReadableStream start");
       const reader = response.body?.getReader();
       if (!reader) {
+        console.error("No reader for response body");
         controller.close();
         return;
       }
@@ -61,9 +73,14 @@ export default defineEventHandler(async (event) => {
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            console.log("Backend reader done");
+            break;
+          }
 
-          buffer += decoder.decode(value, { stream: true });
+          const decodedValue = decoder.decode(value, { stream: true });
+          console.log("Backend received value part:", decodedValue);
+          buffer += decodedValue;
 
           // process complete lines
           let lineEnd;
@@ -71,19 +88,23 @@ export default defineEventHandler(async (event) => {
             const line = buffer.slice(0, lineEnd).trim();
             buffer = buffer.slice(lineEnd + 1);
 
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
+            if (line.startsWith("data:")) {
+              const data = line.startsWith("data: ") ? line.slice(6) : line.slice(5);
+              if (data === "[DONE]") {
+                console.log("Backend received [DONE]");
+                continue;
+              }
 
               try {
                 const parsed = JSON.parse(data);
                 const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
+                if (content !== undefined && content !== null) {
+                  console.log("Enqueuing content:", content);
                   fullResponse += content;
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
                 }
-              } catch {
-                // ignore parse errors
+              } catch (e) {
+                console.error("Backend JSON parse error for data:", data, e);
               }
             }
           }
@@ -91,6 +112,7 @@ export default defineEventHandler(async (event) => {
 
         // save assistant response
         if (chatId && fullResponse) {
+          console.log("Saving assistant response, length:", fullResponse.length);
           await db.insert(messagesTable).values({
             id: crypto.randomUUID(),
             chatId,
@@ -99,9 +121,11 @@ export default defineEventHandler(async (event) => {
           });
         }
 
+        console.log("Closing controller");
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (e) {
+        console.error("Stream catch error:", e);
         controller.error(e);
       }
     },

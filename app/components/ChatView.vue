@@ -3,6 +3,13 @@
     <!-- header -->
     <header class="h-16 flex items-center justify-between px-6 border-b border-neutral-200/50 dark:border-neutral-800/50 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md sticky top-0 z-10">
       <div class="flex items-center gap-3">
+        <UButton
+          icon="i-lucide-menu"
+          color="neutral"
+          variant="ghost"
+          class="lg:hidden -ml-2"
+          @click="$emit('toggle-sidebar')"
+        />
         <div
           class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700/50"
         >
@@ -138,7 +145,8 @@
             placeholder="Ask me anything..."
             class="w-full resize-none bg-transparent px-6 py-5 pr-14 text-[15px] leading-relaxed placeholder:text-neutral-400 focus:outline-none transition-all font-medium"
             @input="autoResize"
-            @keydown.enter.exact.prevent="sendMessage"
+            @keydown.meta.enter.prevent="sendMessage"
+            @keydown.ctrl.enter.prevent="sendMessage"
           />
           <div class="absolute right-3 bottom-3 flex items-center gap-2">
             <Transition name="fade">
@@ -186,6 +194,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   clear: [];
   saved: [id: string];
+  'toggle-sidebar': [];
 }>();
 
 const input = ref("");
@@ -202,7 +211,7 @@ const showTimestamps = useState("showTimestamps", () => true);
 const useSmartLabeling = useState("useSmartLabeling", () => false);
 
 const creativePrompts = [
-  { icon: "i-lucide-scroll-text", text: "Write a futuristic poem about robot love", iconColor: "text-blue-500", bgGradient: "from-blue-600/10 to-blue-400/10" },
+  { icon: "i-lucide-scroll-text", text: "Write a short story about a space explorer", iconColor: "text-blue-500", bgGradient: "from-blue-600/10 to-blue-400/10" },
   { icon: "i-lucide-party-popper", text: "Plan a mystery-themed dinner party", iconColor: "text-rose-500", bgGradient: "from-rose-600/10 to-rose-400/10" },
   { icon: "i-lucide-help-circle", text: "Explain coding using pizza metaphors", iconColor: "text-amber-500", bgGradient: "from-amber-600/10 to-amber-400/10" },
   { icon: "i-lucide-clapperboard", text: "Pitch a sci-fi movie about time travel", iconColor: "text-emerald-500", bgGradient: "from-emerald-600/10 to-emerald-400/10" },
@@ -318,6 +327,8 @@ async function processMessage(userMessage: string) {
       signal: abortController.value.signal,
     });
 
+    console.log("Fetch response received:", response.status);
+
     if (!response.ok) {
         throw new Error(`Server returned ${response.status}: AI service unavailable.`);
     }
@@ -330,33 +341,52 @@ async function processMessage(userMessage: string) {
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        console.log("Stream reader done");
+        break;
+      }
 
-      buffer += decoder.decode(value, { stream: true });
+      const chunk = decoder.decode(value, { stream: true });
+      console.log("Received chunk:", chunk);
+      buffer += chunk;
       let lines = buffer.split("\n");
       buffer = lines.pop() || "";
 
       for (const line of lines) {
         const cleaned = line.trim();
-        if (!cleaned || !cleaned.startsWith("data: ")) continue;
-        const data = cleaned.slice(6);
-        if (data === "[DONE]") continue;
+        if (!cleaned) continue;
+        if (!cleaned.startsWith("data:")) {
+          console.log("Line skipped (no data: prefix):", cleaned);
+          continue;
+        }
+        const data = cleaned.startsWith("data: ") ? cleaned.slice(6) : cleaned.slice(5);
+        if (data === "[DONE]") {
+          console.log("Received [DONE]");
+          continue;
+        }
 
         try {
           const parsed = JSON.parse(data);
-          const delta = parsed.content || ""; // Backend uses { content } not delta in our simple mock
+          const delta = parsed.content || ""; 
+          console.log("Parsed delta:", delta);
           if (messages.value[assistantIndex] && messages.value[assistantIndex].role === 'assistant') {
             messages.value[assistantIndex].content += delta;
+            console.log("Message updated at index", assistantIndex, "new length:", messages.value[assistantIndex].content.length);
             scrollToBottom();
+          } else {
+            const currentMsg = messages.value[assistantIndex];
+            console.warn("Could not find assistant message at index", assistantIndex, "current role:", currentMsg?.role);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error("Failed to parse JSON from data chunk:", data, e);
+        }
       }
     }
 
     // Naming logic
     if (messages.value.length === 2) {
       if (useSmartLabeling.value) {
-        await smartRename(userMessage, messages.value[assistantIndex].content, currentId);
+        await smartRename(userMessage, messages.value[assistantIndex]?.content || "", currentId);
       } else {
         await autoRename(userMessage, currentId);
       }
@@ -404,8 +434,9 @@ async function retryMessage(index: number) {
   if (isLoading.value) return;
   let lastUserMsg = "";
   for (let i = index; i >= 0; i--) {
-    if (messages.value[i]?.role === 'user') {
-      lastUserMsg = messages.value[i].content;
+    const msg = messages.value[i];
+    if (msg?.role === 'user') {
+      lastUserMsg = msg.content;
       messages.value = messages.value.slice(0, i);
       break;
     }
@@ -414,7 +445,7 @@ async function retryMessage(index: number) {
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     clearChat();
   }

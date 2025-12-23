@@ -126,6 +126,48 @@
                 </div>
                 <USwitch v-model="useSmartLabeling" />
               </div>
+
+              <!-- Glassmorphism -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center shadow-sm">
+                    <UIcon name="i-lucide-layers" class="text-neutral-500" />
+                  </div>
+                  <div>
+                    <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Glassmorphism</p>
+                    <p class="text-[11px] text-neutral-500">Enable backdrop blur effects</p>
+                  </div>
+                </div>
+                <USwitch v-model="useGlass" />
+              </div>
+
+              <!-- Sharp Bubbles -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center shadow-sm">
+                    <UIcon name="i-lucide-square" class="text-neutral-500" />
+                  </div>
+                  <div>
+                    <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Sharp Bubbles</p>
+                    <p class="text-[11px] text-neutral-500">Modern sharp edge profile</p>
+                  </div>
+                </div>
+                <USwitch v-model="useSharpBubbles" />
+              </div>
+
+              <!-- Reduced Motion -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center shadow-sm">
+                    <UIcon name="i-lucide-zap-off" class="text-neutral-500" />
+                  </div>
+                  <div>
+                    <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Reduced Motion</p>
+                    <p class="text-[11px] text-neutral-500">Faster, simpler transitions</p>
+                  </div>
+                </div>
+                <USwitch v-model="useReducedMotion" />
+              </div>
             </div>
           </div>
         </div>
@@ -152,6 +194,9 @@ const isCompact = useState("sidebarCompact", () => false);
 const fontSize = useState("chatFontSize", () => 15);
 const showTimestamps = useState("showTimestamps", () => true);
 const useSmartLabeling = useState("useSmartLabeling", () => false);
+const useGlass = useState("useGlass", () => true);
+const useSharpBubbles = useState("useSharpBubbles", () => false);
+const useReducedMotion = useState("useReducedMotion", () => false);
 
 const themeOptions = [
   { value: "light", label: "Light", icon: "i-lucide-sun" },

@@ -2,7 +2,10 @@
   <UApp>
     <div class="flex h-screen bg-neutral-50 dark:bg-neutral-950 font-sans selection:bg-primary-500/30">
       <!-- sidebar -->
-      <aside class="w-72 flex flex-col border-r border-neutral-200/60 dark:border-neutral-800/60 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl">
+      <aside 
+        class="fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-neutral-200/60 dark:border-neutral-800/60 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl transition-transform duration-300 transform lg:relative lg:translate-x-0"
+        :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+      >
         <div class="h-20 flex items-center px-6 border-b border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-900/50">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-lg shadow-primary-500/20 ring-4 ring-primary-500/10 transition-all duration-500">
@@ -13,6 +16,13 @@
               <p class="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-1">Intelligence</p>
             </div>
           </div>
+          <UButton
+            icon="i-lucide-x"
+            color="neutral"
+            variant="ghost"
+            class="ml-auto lg:hidden"
+            @click="isSidebarOpen = false"
+          />
         </div>
 
         <!-- Sidebar Search -->
@@ -37,7 +47,7 @@
               <UIcon name="i-lucide-plus" class="text-lg text-primary-500" />
               <span class="text-neutral-700 dark:text-neutral-200">New Conversation</span>
             </div>
-            <kbd class="hidden sm:block px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700 text-[10px] text-neutral-400 font-mono">⌘N</kbd>
+            <kbd class="hidden sm:block px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700 text-[10px] text-neutral-400 font-mono">⌘K</kbd>
           </button>
         </div>
 
@@ -132,14 +142,24 @@
         </div>
       </aside>
 
+      <!-- Overlay for mobile sidebar -->
+      <Transition name="fade">
+        <div 
+          v-if="isSidebarOpen" 
+          class="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm z-40 lg:hidden"
+          @click="isSidebarOpen = false"
+        />
+      </Transition>
+
       <!-- main content -->
-      <main class="flex-1 flex flex-col min-w-0 bg-white dark:bg-neutral-900 shadow-2xl">
+      <main class="flex-1 flex flex-col min-w-0 bg-white dark:bg-neutral-900 lg:shadow-2xl">
         <ChatView
           v-if="activeChatId"
           :key="activeChatId"
           :chat-id="activeChatId"
           @clear="clearCurrentChat"
           @saved="onChatSaved"
+          @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
         />
       </main>
 
@@ -158,6 +178,7 @@ interface ChatData {
 const chats = ref<ChatData[]>([]);
 const activeChatId = ref<string | null>("__new__");
 const showSettings = ref(false);
+const isSidebarOpen = ref(false);
 const editingChatId = ref<string | null>(null);
 const editingTitle = ref("");
 const searchQuery = ref("");
@@ -166,6 +187,9 @@ const fontSize = useState("chatFontSize", () => 15);
 const showTimestamps = useState("showTimestamps", () => true);
 const useSmartLabeling = useState("useSmartLabeling", () => false);
 const selectedAccent = useState("accentColor", () => "green");
+const useGlass = useState("useGlass", () => true);
+const useSharpBubbles = useState("useSharpBubbles", () => false);
+const useReducedMotion = useState("useReducedMotion", () => false);
 
 const filteredChats = computed(() => {
   if (!searchQuery.value.trim()) return chats.value;
@@ -201,7 +225,10 @@ watch([selectedAccent, isCompact, fontSize, showTimestamps, useSmartLabeling], (
       sidebarCompact: isCompact.value,
       chatFontSize: fontSize.value,
       showTimestamps: showTimestamps.value,
-      useSmartLabeling: useSmartLabeling.value
+      useSmartLabeling: useSmartLabeling.value,
+      useGlass: useGlass.value,
+      useSharpBubbles: useSharpBubbles.value,
+      useReducedMotion: useReducedMotion.value
     }));
   }
 }, { deep: true, immediate: true });
@@ -223,6 +250,10 @@ useHead({
       id: "dynamic-theme",
       innerHTML: computed(() => {
         const color = primaryColor.value;
+        const blur = useGlass.value ? "12px" : "0px";
+        const radius = useSharpBubbles.value ? "4px" : "1.25rem";
+        const motion = useReducedMotion.value ? "0s" : "0.4s";
+        
         return `
           :root {
             --ui-color-primary-50: ${color}11;
@@ -237,6 +268,10 @@ useHead({
             --color-primary-400: ${color}aa;
             --color-primary-500: ${color};
             --color-primary-600: ${color}dd;
+
+            --glass-blur: ${blur};
+            --bubble-radius: ${radius};
+            --motion-duration: ${motion};
           }
         `;
       })
@@ -302,14 +337,27 @@ async function clearCurrentChat() {
 // Keyboard shortcuts
 onMounted(() => {
   const handleKeyDown = (e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-      e.preventDefault()
-      createNewChat()
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+    if (modifier && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      createNewChat();
     }
-  }
-  window.addEventListener('keydown', handleKeyDown)
-  onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
-})
+
+    if (modifier && e.key === ',') {
+      e.preventDefault();
+      showSettings.value = true;
+    }
+    
+    if (modifier && e.shiftKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      clearCurrentChat();
+    }
+  };
+  window.addEventListener('keydown', handleKeyDown, { capture: true });
+  onUnmounted(() => window.removeEventListener('keydown', handleKeyDown, { capture: true }));
+});
 
 onMounted(loadChats);
 </script>

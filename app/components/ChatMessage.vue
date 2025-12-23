@@ -18,14 +18,17 @@
     <!-- content -->
     <div class="flex-1 min-w-0 relative" :class="isUser ? 'flex flex-col items-end' : 'flex flex-col items-start'">
       <div
-        class="inline-block max-w-full rounded-2xl px-5 py-3.5 shadow-sm transition-all group/bubble relative"
+        class="inline-block max-w-full px-5 py-3.5 shadow-sm transition-all group/bubble relative"
         :class="[
           isUser
-            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-tr-none'
-            : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 text-neutral-900 dark:text-neutral-100 rounded-tl-none hover:shadow-md',
+            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white'
+            : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 text-neutral-900 dark:text-neutral-100 hover:shadow-md',
           role === 'error' ? 'border-rose-500/50 dark:border-rose-500/30 bg-rose-500/5 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400' : ''
         ]"
-        :style="{ fontSize: `${fontSize}px` }"
+        :style="{ 
+          fontSize: `${fontSize}px`,
+          borderRadius: isUser ? `var(--bubble-radius) 0 var(--bubble-radius) var(--bubble-radius)` : `0 var(--bubble-radius) var(--bubble-radius) var(--bubble-radius)`
+        }"
       >
         <!-- loading state -->
         <div v-if="isLoading && !content" class="flex items-center gap-1.5 py-1">
