@@ -110,18 +110,21 @@
                 </div>
               </div>
 
-              <!-- Show Timestamps -->
+              <!-- Smart Labeling -->
               <div class="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center shadow-sm">
-                    <UIcon name="i-lucide-clock" class="text-neutral-500" />
+                    <UIcon name="i-lucide-sparkles" class="text-neutral-500" />
                   </div>
                   <div>
-                    <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Show Timestamps</p>
-                    <p class="text-[11px] text-neutral-500">On every message</p>
+                    <div class="flex items-center gap-2">
+                       <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Smart Labeling</p>
+                       <span class="px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/30 text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tighter">Experimental</span>
+                    </div>
+                    <p class="text-[11px] text-neutral-500">AI-generated chat titles</p>
                   </div>
                 </div>
-                <USwitch v-model="showTimestamps" />
+                <USwitch v-model="useSmartLabeling" />
               </div>
             </div>
           </div>
@@ -148,6 +151,7 @@ const colorMode = useColorMode();
 const isCompact = useState("sidebarCompact", () => false);
 const fontSize = useState("chatFontSize", () => 15);
 const showTimestamps = useState("showTimestamps", () => true);
+const useSmartLabeling = useState("useSmartLabeling", () => false);
 
 const themeOptions = [
   { value: "light", label: "Light", icon: "i-lucide-sun" },

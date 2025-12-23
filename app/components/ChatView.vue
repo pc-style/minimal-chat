@@ -30,14 +30,33 @@
     <div ref="messagesContainer" class="flex-1 overflow-y-auto scroll-smooth">
       <div class="max-w-3xl mx-auto py-10 px-6">
         <!-- empty state for this chat -->
-        <div v-if="messages.length === 0 && !isLoading" class="flex flex-col items-center justify-center py-20 text-center">
-          <div class="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
-            <UIcon name="i-lucide-message-circle" class="text-3xl text-neutral-400" />
+        <div v-if="messages.length === 0 && !isLoading" class="flex flex-col items-center justify-center py-12 text-center animate-slide-up">
+          <div
+            class="w-20 h-20 mx-auto rounded-[2rem] bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-2xl shadow-primary-500/40 ring-8 ring-primary-500/10 mb-8"
+          >
+            <span class="text-white font-black italic tracking-tighter text-3xl select-none">AI</span>
           </div>
-          <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">Start a new conversation</h3>
-          <p class="text-neutral-500 dark:text-neutral-400 max-w-sm mt-2">
-            Ask anything - from complex code to creative writing. Apple Intelligence is here to help.
+
+          <h3 class="text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight mb-4">
+            How can I help you today?
+          </h3>
+          <p class="text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-12">
+            I'm Apple Intelligence. I can help you write, code, brainstorm, and more.
           </p>
+
+          <div class="grid grid-cols-2 gap-3 w-full max-w-2xl mx-auto">
+            <button
+              v-for="card in promptCards"
+              :key="card.text"
+              class="flex flex-col items-center p-6 text-center rounded-2xl bg-white dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-xl hover:border-primary-500/50 transition-all group active:scale-[0.98]"
+              @click="sendInitialPrompt(card.text)"
+            >
+              <div class="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center mb-3 group-hover:bg-primary-500/10 transition-colors">
+                <UIcon :name="card.icon" class="text-xl text-neutral-400 group-hover:text-primary-500" />
+              </div>
+              <p class="text-[13px] font-bold text-neutral-800 dark:text-neutral-200">{{ card.text }}</p>
+            </button>
+          </div>
         </div>
 
         <!-- messages -->
@@ -73,13 +92,41 @@
     <div class="p-6">
       <div class="max-w-3xl mx-auto">
         <!-- Message Queue Indicator -->
-        <Transition name="fade">
-          <div v-if="messageQueue.length > 0" class="flex items-center gap-2 mb-3 px-4 py-2 rounded-xl bg-primary-500/5 border border-primary-500/10 text-[12px] font-medium text-primary-600 dark:text-primary-400">
-            <UIcon name="i-lucide-list-ordered" class="text-base" />
-            <span>{{ messageQueue.length }} message{{ messageQueue.length > 1 ? 's' : '' }} queued</span>
-            <div class="flex-1" />
-            <button @click="messageQueue = []" class="hover:underline opacity-60 hover:opacity-100">Clear queue</button>
+        <!-- queue indicator -->
+      <div v-if="messageQueue.length > 0" class="max-w-3xl mx-auto px-6 mb-4">
+        <div class="flex flex-col gap-2">
+          <div 
+            v-for="(queuedMsg, idx) in messageQueue" 
+            :key="idx"
+            class="group relative flex items-center justify-between gap-4 p-3 pr-4 rounded-xl bg-neutral-100/50 dark:bg-neutral-800/50 border border-neutral-200/50 dark:border-neutral-700/50 animate-slide-up"
+          >
+            <div class="flex items-center gap-3 overflow-hidden">
+              <div class="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-neutral-500">
+                {{ idx + 1 }}
+              </div>
+              <input 
+                v-model="messageQueue[idx]"
+                class="bg-transparent border-none focus:ring-0 text-[13px] text-neutral-600 dark:text-neutral-400 w-full truncate"
+              />
+            </div>
+            <button 
+              @click="removeFromQueue(idx)"
+              class="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-all"
+            >
+              <UIcon name="i-lucide-x" class="text-xs" />
+            </button>
           </div>
+          <div class="flex items-center justify-between px-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">Messages in Queue</span>
+            <button 
+              @click="messageQueue = []"
+              class="text-[10px] font-bold text-rose-500 hover:text-rose-600 transition-colors"
+            >
+              Clear Queue
+            </button>
+          </div>
+        </div>
+      </div>
         </Transition>
 
         <div 
@@ -141,6 +188,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   clear: [];
+  saved: [id: string];
 }>();
 
 const input = ref("");
@@ -180,6 +228,10 @@ function scrollToBottom() {
 }
 
 async function loadMessages() {
+  if (props.chatId === "__new__") {
+    messages.value = [];
+    return;
+  }
   try {
     const data = await $fetch<{ messages: Message[] }>(`/api/chats/${props.chatId}`);
     messages.value = data.messages.filter((m) => m.role === "user" || m.role === "assistant");
@@ -203,6 +255,10 @@ function stopGenerating() {
   }
 }
 
+function removeFromQueue(index: number) {
+  messageQueue.value.splice(index, 1);
+}
+
 async function sendMessage() {
   if (!input.value.trim()) return;
 
@@ -221,6 +277,16 @@ async function sendMessage() {
 }
 
 async function processMessage(userMessage: string) {
+  const useSmartLabeling = useState("useSmartLabeling", () => false);
+  let currentId = props.chatId;
+
+  // Handle phantom chat creation
+  if (currentId === "__new__") {
+    const chat = await $fetch<any>("/api/chats", { method: "POST" });
+    currentId = chat.id;
+    emit("saved", chat.id);
+  }
+
   isLoading.value = true;
   messages.value.push({ role: "user", content: userMessage });
   messages.value.push({ role: "assistant", content: "" });
@@ -228,6 +294,15 @@ async function processMessage(userMessage: string) {
   scrollToBottom();
 
   abortController.value = new AbortController();
+
+  try {
+    const response = await fetch(`/api/chats/${currentId}/messages`, {
+      method: "POST",
+      signal: abortController.value.signal,
+      body: JSON.stringify({ content: userMessage }),
+    });
+
+    // ... rest of stream logic ...
 
   try {
     const response = await fetch("/api/chat", {
@@ -344,12 +419,34 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  loadMessages();
+const initialPromptState = useState("initialPrompt", () => "");
+
+const promptCards = [
+  { icon: "i-lucide-code-2", text: "Help me write code" },
+  { icon: "i-lucide-palette", text: "Design something" },
+  { icon: "i-lucide-lightbulb", text: "Brainstorm ideas" },
+  { icon: "i-lucide-graduation-cap", text: "Explain concepts" },
+];
+
+async function sendInitialPrompt(text: string) {
+  input.value = text;
+  await sendMessage();
+}
+
+onMounted(async () => {
+  await loadMessages();
   if (messagesContainer.value) {
     messagesContainer.value.addEventListener('scroll', handleScroll);
   }
   window.addEventListener('keydown', handleGlobalKeydown);
+
+  // Auto-send if redirected from empty state with a prompt
+  if (initialPromptState.value) {
+    const prompt = initialPromptState.value;
+    initialPromptState.value = "";
+    input.value = prompt;
+    await sendMessage();
+  }
 });
 
 onUnmounted(() => {

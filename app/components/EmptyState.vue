@@ -3,12 +3,13 @@
     <div class="max-w-xl w-full text-center space-y-10">
       <div class="space-y-4">
         <div
-          class="w-20 h-20 mx-auto rounded-[2rem] bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-2xl shadow-primary-500/30 ring-8 ring-primary-500/10 animate-pulse-slow"
+          class="w-24 h-24 mx-auto rounded-[2.5rem] bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-2xl shadow-primary-500/40 ring-8 ring-primary-500/10 animate-pulse-slow relative mb-8"
         >
-          <UIcon name="i-lucide-sparkles" class="text-4xl text-white" />
+          <div class="absolute inset-0 bg-white/10 rounded-[2.5rem] blur-xl opacity-50" />
+          <span class="text-white font-black italic tracking-tighter text-4xl select-none relative z-10">AI</span>
         </div>
 
-        <h1 class="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">
+        <h1 class="text-4xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight">
           How can I help you today?
         </h1>
 
@@ -19,19 +20,23 @@
 
       <div class="grid grid-cols-2 gap-4">
         <button
-          v-for="prompt in prompts"
+          v-for="prompt in creativePrompts"
           :key="prompt.text"
-          class="flex flex-col items-center p-6 text-center rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 shadow-sm hover:shadow-xl hover:border-primary-500/50 dark:hover:border-primary-400/30 transition-all group scale-100 hover:scale-[1.02] active:scale-[0.98]"
-          @click="$emit('newChat', prompt.text)"
+          class="flex flex-col items-center p-8 text-center rounded-[2.5rem] bg-white dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800 shadow-sm hover:shadow-2xl transition-all duration-500 group scale-100 hover:scale-[1.04] active:scale-[0.98] backdrop-blur-md relative overflow-hidden"
+          :class="prompt.hoverClass"
+          @click="onPromptClick(prompt.text)"
         >
-          <div class="w-12 h-12 rounded-xl bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center mb-4 group-hover:bg-primary-500/10 transition-colors">
+          <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br" :class="prompt.bgGradient" />
+          
+          <div class="w-16 h-16 rounded-[1.5rem] bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-inner relative z-10">
             <UIcon
               :name="prompt.icon"
-              class="text-2xl text-neutral-400 group-hover:text-primary-500 transition-colors"
+              class="text-4xl transition-colors duration-500"
+              :class="['text-neutral-400', prompt.iconColor]"
             />
           </div>
-          <p class="text-sm font-semibold text-neutral-800 dark:text-neutral-200">{{ prompt.text }}</p>
-          <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click to start</p>
+          <p class="text-[16px] font-black tracking-tight text-neutral-800 dark:text-neutral-100 relative z-10 transition-colors duration-500 group-hover:text-white">{{ prompt.text }}</p>
+          <p class="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 mt-2 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0 relative z-10 group-hover:text-white/80 uppercase tracking-widest">Launch Action</p>
         </button>
       </div>
 
@@ -50,16 +55,48 @@
 </template>
 
 <script setup lang="ts">
-defineEmits<{
+const emit = defineEmits<{
   newChat: [prompt?: string];
 }>();
 
-const prompts = [
-  { icon: "i-lucide-code", text: "Help me write code" },
-  { icon: "i-lucide-palette", text: "Design something" },
-  { icon: "i-lucide-lightbulb", text: "Brainstorm ideas" },
-  { icon: "i-lucide-graduation-cap", text: "Explain concepts" },
+const creativePrompts = [
+  { 
+    icon: "i-lucide-code-2", 
+    text: "Help me write code", 
+    hoverClass: "hover:border-blue-500/50", 
+    iconColor: "group-hover:text-blue-500", 
+    bgGradient: "from-blue-600/90 to-blue-400/90",
+    shadowColor: "shadow-blue-500/20"
+  },
+  { 
+    icon: "i-lucide-palette", 
+    text: "Design something", 
+    hoverClass: "hover:border-rose-500/50", 
+    iconColor: "group-hover:text-rose-500", 
+    bgGradient: "from-rose-600/90 to-rose-400/90",
+    shadowColor: "shadow-rose-500/20"
+  },
+  { 
+    icon: "i-lucide-lightbulb", 
+    text: "Brainstorm ideas", 
+    hoverClass: "hover:border-amber-500/50", 
+    iconColor: "group-hover:text-amber-500", 
+    bgGradient: "from-amber-600/90 to-amber-400/90",
+    shadowColor: "shadow-amber-500/20"
+  },
+  { 
+    icon: "i-lucide-graduation-cap", 
+    text: "Explain concepts", 
+    hoverClass: "hover:border-emerald-500/50", 
+    iconColor: "group-hover:text-emerald-500", 
+    bgGradient: "from-emerald-600/90 to-emerald-400/90",
+    shadowColor: "shadow-emerald-500/20"
+  },
 ];
+
+function onPromptClick(text: string) {
+  emit('newChat', text);
+}
 </script>
 
 <style scoped>

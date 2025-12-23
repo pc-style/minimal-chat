@@ -1,15 +1,17 @@
 <template>
-  <UApp :style="appStyle">
+  <UApp>
     <div class="flex h-screen bg-neutral-50 dark:bg-neutral-950 font-sans selection:bg-primary-500/30">
       <!-- sidebar -->
       <aside class="w-72 flex flex-col border-r border-neutral-200/60 dark:border-neutral-800/60 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl">
-        <!-- logo -->
-        <div class="h-16 flex items-center px-6 border-b border-neutral-200/60 dark:border-neutral-800/60">
+        <div class="h-20 flex items-center px-6 border-b border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-900/50">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-lg shadow-primary-500/20 ring-4 ring-primary-500/10 transition-all duration-500">
-              <UIcon name="i-lucide-sparkles" class="text-white text-base animate-pulse" />
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-lg shadow-primary-500/20 ring-4 ring-primary-500/10 transition-all duration-500">
+              <span class="text-white font-black italic tracking-tighter text-lg select-none">AI</span>
             </div>
-            <span class="font-bold text-[15px] tracking-tight text-neutral-900 dark:text-white">Minimal Chat</span>
+            <div>
+              <p class="font-bold text-[14px] leading-none text-neutral-900 dark:text-white">Minimal Chat</p>
+              <p class="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-1">Intelligence</p>
+            </div>
           </div>
         </div>
 
@@ -137,8 +139,12 @@
           :key="activeChatId"
           :chat-id="activeChatId"
           @clear="clearCurrentChat"
+          @saved="onChatSaved"
         />
-        <EmptyState v-else @new-chat="createNewChat" />
+        <div v-else class="flex-1 flex items-center justify-center">
+           <!-- Fallback if somehow nothing is active -->
+           <UButton label="New Chat" @click="createNewChat" />
+        </div>
       </main>
 
       <!-- modals -->
@@ -154,12 +160,16 @@ interface ChatData {
 }
 
 const chats = ref<ChatData[]>([]);
-const activeChatId = ref<string | null>(null);
+const activeChatId = ref<string | null>("__new__");
 const showSettings = ref(false);
 const editingChatId = ref<string | null>(null);
 const editingTitle = ref("");
 const searchQuery = ref("");
 const isCompact = useState("sidebarCompact", () => false);
+const fontSize = useState("chatFontSize", () => 15);
+const showTimestamps = useState("showTimestamps", () => true);
+const useSmartLabeling = useState("useSmartLabeling", () => false);
+const selectedAccent = useState("accentColor", () => "green");
 
 const filteredChats = computed(() => {
   if (!searchQuery.value.trim()) return chats.value;
@@ -168,8 +178,38 @@ const filteredChats = computed(() => {
   );
 });
 
-// Accent Color Logic
-const selectedAccent = useState("accentColor", () => "green");
+// Persistence
+onMounted(() => {
+  if (process.client) {
+    const saved = localStorage.getItem("minimal-chat-prefs");
+    if (saved) {
+      try {
+        const prefs = JSON.parse(saved);
+        if (prefs.accentColor) selectedAccent.value = prefs.accentColor;
+        if (typeof prefs.sidebarCompact === 'boolean') isCompact.value = prefs.sidebarCompact;
+        if (typeof prefs.chatFontSize === 'number') fontSize.value = prefs.chatFontSize;
+        if (typeof prefs.showTimestamps === 'boolean') showTimestamps.value = prefs.showTimestamps;
+        if (typeof prefs.useSmartLabeling === 'boolean') useSmartLabeling.value = prefs.useSmartLabeling;
+      } catch (e) {
+        console.error("Failed to load prefs", e);
+      }
+    }
+  }
+});
+
+watch([selectedAccent, isCompact, fontSize, showTimestamps, useSmartLabeling], () => {
+  console.log("Prefs changed:", { accent: selectedAccent.value });
+  if (process.client) {
+    localStorage.setItem("minimal-chat-prefs", JSON.stringify({
+      accentColor: selectedAccent.value,
+      sidebarCompact: isCompact.value,
+      chatFontSize: fontSize.value,
+      showTimestamps: showTimestamps.value,
+      useSmartLabeling: useSmartLabeling.value
+    }));
+  }
+}, { deep: true, immediate: true });
+
 const accentMap: Record<string, string> = {
   green: "#10b981",
   blue: "#3b82f6",
@@ -179,13 +219,33 @@ const accentMap: Record<string, string> = {
   cyan: "#06b6d4"
 };
 
-const appStyle = computed(() => {
-  const color = accentMap[selectedAccent.value] || accentMap.green;
-  return {
-    "--color-primary-500": color,
-    "--color-primary-600": color + 'cc',
-    "--color-primary-400": color + 'bb'
-  };
+const primaryColor = computed(() => accentMap[selectedAccent.value] || accentMap.green);
+
+useHead({
+  style: [
+    {
+      id: "dynamic-theme",
+      innerHTML: computed(() => {
+        const color = primaryColor.value;
+        return `
+          :root {
+            --ui-color-primary-50: ${color}11;
+            --ui-color-primary-100: ${color}22;
+            --ui-color-primary-200: ${color}44;
+            --ui-color-primary-300: ${color}77;
+            --ui-color-primary-400: ${color}aa;
+            --ui-color-primary-500: ${color};
+            --ui-color-primary-600: ${color}dd;
+            --ui-color-primary-700: ${color}ee;
+            
+            --color-primary-400: ${color}aa;
+            --color-primary-500: ${color};
+            --color-primary-600: ${color}dd;
+          }
+        `;
+      })
+    }
+  ]
 });
 
 async function loadChats() {
@@ -193,9 +253,12 @@ async function loadChats() {
 }
 
 async function createNewChat() {
-  const chat = await $fetch<ChatData>("/api/chats", { method: "POST" });
-  activeChatId.value = chat.id;
-  await loadChats();
+  activeChatId.value = "__new__";
+}
+
+function onChatSaved(newId: string) {
+  activeChatId.value = newId;
+  loadChats();
 }
 
 function selectChat(chatId: string) {
