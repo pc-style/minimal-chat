@@ -49,15 +49,39 @@
               :is-user="msg.role === 'user'"
               :content="msg.content"
               :is-loading="isLoading && i === messages.length - 1 && msg.role === 'assistant'"
+              :font-size="fontSize"
+              :show-timestamp="showTimestamps"
+              @retry="retryMessage(i)"
             />
           </TransitionGroup>
         </div>
       </div>
+
+      <!-- scroll to bottom -->
+      <Transition name="fade">
+        <button
+          v-if="showScrollButton"
+          class="fixed bottom-32 right-8 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 shadow-xl border border-neutral-200 dark:border-neutral-700 flex items-center justify-center text-neutral-500 hover:text-primary-500 transition-all z-20"
+          @click="scrollToBottom"
+        >
+          <UIcon name="i-lucide-arrow-down" class="text-lg" />
+        </button>
+      </Transition>
     </div>
 
     <!-- input area -->
     <div class="p-6">
       <div class="max-w-3xl mx-auto">
+        <!-- Message Queue Indicator -->
+        <Transition name="fade">
+          <div v-if="messageQueue.length > 0" class="flex items-center gap-2 mb-3 px-4 py-2 rounded-xl bg-primary-500/5 border border-primary-500/10 text-[12px] font-medium text-primary-600 dark:text-primary-400">
+            <UIcon name="i-lucide-list-ordered" class="text-base" />
+            <span>{{ messageQueue.length }} message{{ messageQueue.length > 1 ? 's' : '' }} queued</span>
+            <div class="flex-1" />
+            <button @click="messageQueue = []" class="hover:underline opacity-60 hover:opacity-100">Clear queue</button>
+          </div>
+        </Transition>
+
         <div 
           class="relative group transition-all duration-300 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 shadow-sm focus-within:shadow-xl focus-within:border-primary-500/50 dark:focus-within:border-primary-400/30 ring-0 focus-within:ring-4 focus-within:ring-primary-500/10"
         >
@@ -67,25 +91,30 @@
             rows="1"
             placeholder="Ask me anything..."
             class="w-full resize-none bg-transparent px-5 py-4 pr-14 text-[15px] leading-relaxed placeholder:text-neutral-400 focus:outline-none transition-all"
-            :disabled="isLoading"
             @input="autoResize"
             @keydown.enter.exact.prevent="sendMessage"
           />
           <div class="absolute right-3 bottom-3 flex items-center gap-2">
+            <!-- Stop Button -->
             <Transition name="fade">
               <button
-                v-if="input.trim() || isLoading"
-                class="flex items-center justify-center w-10 h-10 rounded-xl transition-all shadow-lg"
-                :class="
-                  input.trim() && !isLoading
-                    ? 'bg-primary-500 text-white hover:bg-primary-600 scale-100'
-                    : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400'
-                "
-                :disabled="!input.trim() || isLoading"
+                v-if="isLoading"
+                class="flex items-center justify-center w-10 h-10 rounded-xl bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all scale-100 active:scale-95"
+                title="Stop generating"
+                @click="stopGenerating"
+              >
+                <UIcon name="i-lucide-square" class="text-sm fill-current" />
+              </button>
+            </Transition>
+
+            <!-- Send Button -->
+            <Transition name="fade">
+              <button
+                v-if="input.trim()"
+                class="flex items-center justify-center w-10 h-10 rounded-xl transition-all shadow-lg bg-primary-500 text-white hover:bg-primary-600 scale-100 active:scale-95"
                 @click="sendMessage"
               >
-                <UIcon v-if="isLoading" name="i-lucide-loader-2" class="text-lg animate-spin" />
-                <UIcon v-else name="i-lucide-arrow-up" class="text-xl" />
+                <UIcon name="i-lucide-arrow-up" class="text-xl" />
               </button>
             </Transition>
           </div>
@@ -117,8 +146,20 @@ const emit = defineEmits<{
 const input = ref("");
 const messages = ref<Message[]>([]);
 const isLoading = ref(false);
+const messageQueue = ref<string[]>([]);
+const abortController = ref<AbortController | null>(null);
 const messagesContainer = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLTextAreaElement | null>(null);
+const showScrollButton = ref(false);
+
+const fontSize = useState("chatFontSize", () => 15);
+const showTimestamps = useState("showTimestamps", () => true);
+
+function handleScroll() {
+  if (!messagesContainer.value) return;
+  const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value;
+  showScrollButton.value = scrollHeight - scrollTop - clientHeight > 200;
+}
 
 function autoResize() {
   if (!inputRef.value) return;
@@ -149,25 +190,44 @@ async function loadMessages() {
 }
 
 function clearChat() {
+  stopGenerating();
   messages.value = [];
   emit("clear");
 }
 
+function stopGenerating() {
+  if (abortController.value) {
+    abortController.value.abort();
+    abortController.value = null;
+    isLoading.value = false;
+  }
+}
+
 async function sendMessage() {
-  if (!input.value.trim() || isLoading.value) return;
+  if (!input.value.trim()) return;
 
-  const userMessage = input.value;
+  const content = input.value.trim();
   input.value = "";
-  isLoading.value = true;
-
   if (inputRef.value) {
     inputRef.value.style.height = "auto";
   }
 
+  if (isLoading.value) {
+    messageQueue.value.push(content);
+    return;
+  }
+
+  await processMessage(content);
+}
+
+async function processMessage(userMessage: string) {
+  isLoading.value = true;
   messages.value.push({ role: "user", content: userMessage });
   messages.value.push({ role: "assistant", content: "" });
   const assistantIndex = messages.value.length - 1;
   scrollToBottom();
+
+  abortController.value = new AbortController();
 
   try {
     const response = await fetch("/api/chat", {
@@ -177,6 +237,7 @@ async function sendMessage() {
         chatId: props.chatId,
         messages: messages.value.slice(0, -1),
       }),
+      signal: abortController.value.signal,
     });
 
     if (!response.ok) throw new Error("API error");
@@ -204,26 +265,100 @@ async function sendMessage() {
 
             try {
               const parsed = JSON.parse(data);
-              if (parsed.content && messages.value[assistantIndex]) {
-                messages.value[assistantIndex]!.content += parsed.content;
+              const assistantMsg = messages.value[assistantIndex];
+              if (parsed.content && assistantMsg) {
+                assistantMsg.content += parsed.content;
                 scrollToBottom();
               }
             } catch {
               // ignore parse errors
             }
-          }
         }
       }
-    } catch {
-      if (messages.value[assistantIndex]) {
-        messages.value[assistantIndex]!.content = "Something went wrong. Please try again.";
+    }
+  } catch (e: any) {
+    if (e.name === 'AbortError') {
+      const assistantMsg = messages.value[assistantIndex];
+      if (assistantMsg) {
+        assistantMsg.content += " _(Interrupted)_";
+      }
+    } else {
+      const assistantMsg = messages.value[assistantIndex];
+      if (assistantMsg) {
+        assistantMsg.content = "Something went wrong. Please try again.";
       }
     }
+  }
 
   isLoading.value = false;
+  abortController.value = null;
+
+  // Auto-rename if it's the first exchange
+  if (messages.value.length === 2) {
+    autoRename(userMessage);
+  }
+
+  // Process next message in queue if any
+  if (messageQueue.value.length > 0) {
+    const nextMessage = messageQueue.value.shift();
+    if (nextMessage) {
+      await processMessage(nextMessage);
+    }
+  }
 }
 
-onMounted(loadMessages);
+async function autoRename(prompt: string) {
+  const title = prompt.length > 40 ? prompt.substring(0, 37) + "..." : prompt;
+  await $fetch(`/api/chats/${props.chatId}`, {
+    method: "PATCH",
+    body: { title }
+  });
+  // Parent will reload chats if needed via some event or just let it be
+}
+
+async function retryMessage(index: number) {
+  if (isLoading.value) return;
+  
+  // Find the last user message before this assistant message
+  let lastUserMessage = "";
+  for (let i = index; i >= 0; i--) {
+    const msg = messages.value[i];
+    if (msg?.role === 'user') {
+      lastUserMessage = msg.content;
+      break;
+    }
+  }
+  
+  if (lastUserMessage) {
+    // Remove all messages from this index onwards
+    messages.value = messages.value.slice(0, index);
+    await processMessage(lastUserMessage);
+  }
+}
+
+// Keyboard shortcuts
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    clearChat();
+  }
+}
+
+onMounted(() => {
+  loadMessages();
+  if (messagesContainer.value) {
+    messagesContainer.value.addEventListener('scroll', handleScroll);
+  }
+  window.addEventListener('keydown', handleGlobalKeydown);
+});
+
+onUnmounted(() => {
+  stopGenerating();
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', handleScroll);
+  }
+  window.removeEventListener('keydown', handleGlobalKeydown);
+});
 </script>
 
 <style>

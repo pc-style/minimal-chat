@@ -1,15 +1,27 @@
 <template>
-  <UApp>
+  <UApp :style="appStyle">
     <div class="flex h-screen bg-neutral-50 dark:bg-neutral-950 font-sans selection:bg-primary-500/30">
       <!-- sidebar -->
       <aside class="w-72 flex flex-col border-r border-neutral-200/60 dark:border-neutral-800/60 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl">
         <!-- logo -->
         <div class="h-16 flex items-center px-6 border-b border-neutral-200/60 dark:border-neutral-800/60">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-lg shadow-primary-500/20 ring-4 ring-primary-500/10">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 via-primary-500 to-primary-400 flex items-center justify-center shadow-lg shadow-primary-500/20 ring-4 ring-primary-500/10 transition-all duration-500">
               <UIcon name="i-lucide-sparkles" class="text-white text-base animate-pulse" />
             </div>
             <span class="font-bold text-[15px] tracking-tight text-neutral-900 dark:text-white">Minimal Chat</span>
+          </div>
+        </div>
+
+        <!-- Sidebar Search -->
+        <div class="px-4 pt-4">
+          <div class="relative group">
+            <UIcon name="i-lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-sm group-focus-within:text-primary-500 transition-colors" />
+            <input 
+              v-model="searchQuery" 
+              placeholder="Search chats..." 
+              class="w-full bg-neutral-100/50 dark:bg-neutral-800/50 border border-transparent focus:border-primary-500/30 focus:bg-white dark:focus:bg-neutral-800 rounded-xl py-2 pl-9 pr-3 text-[13px] outline-none transition-all placeholder:text-neutral-400"
+            />
           </div>
         </div>
 
@@ -28,34 +40,67 @@
         </div>
 
         <!-- chat list -->
-        <div class="flex-1 overflow-y-auto px-4 space-y-4">
+        <div class="flex-1 overflow-y-auto px-4 space-y-4 pt-2">
           <div>
-            <h3 class="px-2 text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-3">Recent Chats</h3>
+            <div class="flex items-center justify-between px-2 mb-3">
+              <h3 class="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Recent Chats</h3>
+              <div class="flex gap-1">
+                <button @click="isCompact = !isCompact" class="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" :title="isCompact ? 'Normal view' : 'Compact view'">
+                  <UIcon :name="isCompact ? 'i-lucide-layout-list' : 'i-lucide-list'" class="text-sm" />
+                </button>
+              </div>
+            </div>
             <TransitionGroup name="list" tag="div" class="space-y-1">
               <div
-                v-for="chat in chats"
+                v-for="chat in filteredChats"
                 :key="chat.id"
-                class="w-full group flex items-center gap-3 px-3 py-2.5 text-[13px] rounded-xl transition-all text-left cursor-pointer border border-transparent"
-                :class="
+                class="w-full group flex items-center gap-3 rounded-xl transition-all text-left cursor-pointer border border-transparent"
+                :class="[
                   chat.id === activeChatId
                     ? 'bg-white dark:bg-neutral-800 border-neutral-200/60 dark:border-neutral-700/60 shadow-sm text-neutral-900 dark:text-white'
-                    : 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40'
-                "
-                @click="selectChat(chat.id)"
+                    : 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40',
+                  isCompact ? 'px-2.5 py-1.5' : 'px-3 py-2.5'
+                ]"
+                @click="editingChatId !== chat.id && selectChat(chat.id)"
               >
                 <div 
-                  class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-                  :class="chat.id === activeChatId ? 'bg-primary-500/10 text-primary-500' : 'bg-neutral-100 dark:bg-neutral-800/60 group-hover:bg-white dark:group-hover:bg-neutral-700'"
+                  class="rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                  :class="[
+                    chat.id === activeChatId ? 'bg-primary-500/10 text-primary-500' : 'bg-neutral-100 dark:bg-neutral-800/60 group-hover:bg-white dark:group-hover:bg-neutral-700',
+                    isCompact ? 'w-6 h-6' : 'w-8 h-8'
+                  ]"
                 >
-                  <UIcon :name="chat.id === activeChatId ? 'i-lucide-message-circle' : 'i-lucide-message-square'" class="text-base" />
+                  <UIcon :name="chat.id === activeChatId ? 'i-lucide-message-circle' : 'i-lucide-message-square'" :class="isCompact ? 'text-[13px]' : 'text-base'" />
                 </div>
-                <span class="flex-1 truncate font-medium">{{ chat.title || 'New Chat' }}</span>
-                <button
-                  class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 transition-all"
-                  @click.stop="deleteChat(chat.id)"
-                >
-                  <UIcon name="i-lucide-trash-2" class="text-sm" />
-                </button>
+                
+                <div class="flex-1 min-w-0">
+                  <input
+                    v-if="editingChatId === chat.id"
+                    v-model="editingTitle"
+                    class="rename-input w-full bg-transparent border-none p-0 focus:ring-0 font-medium text-neutral-900 dark:text-white"
+                    @keydown.enter="saveRename(chat.id)"
+                    @keydown.esc="cancelRenaming"
+                    @blur="saveRename(chat.id)"
+                  />
+                  <span v-else class="block truncate font-medium">{{ chat.title || 'New Chat' }}</span>
+                </div>
+
+                <div v-if="editingChatId !== chat.id" class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    class="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                    title="Rename"
+                    @click.stop="startRenaming(chat)"
+                  >
+                    <UIcon name="i-lucide-pencil" class="text-xs" />
+                  </button>
+                  <button
+                    class="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 transition-all text-neutral-400"
+                    title="Delete"
+                    @click.stop="deleteChat(chat.id)"
+                  >
+                    <UIcon name="i-lucide-trash-2" class="text-xs" />
+                  </button>
+                </div>
               </div>
             </TransitionGroup>
 
@@ -111,6 +156,37 @@ interface ChatData {
 const chats = ref<ChatData[]>([]);
 const activeChatId = ref<string | null>(null);
 const showSettings = ref(false);
+const editingChatId = ref<string | null>(null);
+const editingTitle = ref("");
+const searchQuery = ref("");
+const isCompact = useState("sidebarCompact", () => false);
+
+const filteredChats = computed(() => {
+  if (!searchQuery.value.trim()) return chats.value;
+  return chats.value.filter(c => 
+    c.title?.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
+
+// Accent Color Logic
+const selectedAccent = useState("accentColor", () => "green");
+const accentMap: Record<string, string> = {
+  green: "#10b981",
+  blue: "#3b82f6",
+  violet: "#8b5cf6",
+  rose: "#f43f5e",
+  orange: "#f59e0b",
+  cyan: "#06b6d4"
+};
+
+const appStyle = computed(() => {
+  const color = accentMap[selectedAccent.value] || accentMap.green;
+  return {
+    "--color-primary-500": color,
+    "--color-primary-600": color + 'cc',
+    "--color-primary-400": color + 'bb'
+  };
+});
 
 async function loadChats() {
   chats.value = await $fetch<ChatData[]>("/api/chats");
@@ -124,6 +200,31 @@ async function createNewChat() {
 
 function selectChat(chatId: string) {
   activeChatId.value = chatId;
+}
+
+async function startRenaming(chat: ChatData) {
+  editingChatId.value = chat.id;
+  editingTitle.value = chat.title || "New Chat";
+  await nextTick();
+  const input = document.querySelector('.rename-input') as HTMLInputElement;
+  input?.focus();
+}
+
+async function cancelRenaming() {
+  editingChatId.value = null;
+  editingTitle.value = "";
+}
+
+async function saveRename(chatId: string) {
+  if (!editingTitle.value.trim()) return cancelRenaming();
+  
+  await $fetch(`/api/chats/${chatId}`, {
+    method: "PATCH",
+    body: { title: editingTitle.value.trim() }
+  });
+  
+  editingChatId.value = null;
+  await loadChats();
 }
 
 async function deleteChat(chatId: string) {
@@ -168,8 +269,4 @@ onMounted(loadChats);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Base styles */
-body {
-  @apply antialiased;
-}
 </style>

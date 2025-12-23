@@ -13,14 +13,15 @@
     </div>
 
     <!-- content -->
-    <div class="flex-1 min-w-0" :class="isUser ? 'flex justify-end' : ''">
+    <div class="flex-1 min-w-0 relative" :class="isUser ? 'flex flex-col items-end' : 'flex flex-col items-start'">
       <div
-        class="inline-block max-w-full rounded-2xl px-5 py-3.5 shadow-sm transition-all"
+        class="inline-block max-w-full rounded-2xl px-5 py-3.5 shadow-sm transition-all group/bubble relative"
         :class="
           isUser
             ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-tr-none'
             : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 text-neutral-900 dark:text-neutral-100 rounded-tl-none hover:shadow-md'
         "
+        :style="{ fontSize: `${fontSize}px` }"
       >
         <!-- loading state -->
         <div v-if="isLoading && !content" class="flex items-center gap-1.5 py-1">
@@ -37,7 +38,34 @@
           :class="isUser ? 'prose-invert' : 'dark:prose-invert'"
           v-html="htmlContent"
         />
+
+        <!-- Action bar -->
+        <div 
+          class="absolute -bottom-10 flex gap-1 items-center opacity-0 group-hover/message:opacity-100 transition-opacity p-1 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm z-10"
+          :class="isUser ? 'right-0' : 'left-0'"
+        >
+          <button 
+            class="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors text-neutral-500" 
+            title="Copy message"
+            @click="copyMessage"
+          >
+            <UIcon :name="copiedMsg ? 'i-lucide-check' : 'i-lucide-copy'" class="text-xs" :class="copiedMsg ? 'text-emerald-500' : ''" />
+          </button>
+          <button 
+            v-if="!isUser"
+            class="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors text-neutral-500" 
+            title="Retry"
+            @click="$emit('retry')"
+          >
+            <UIcon name="i-lucide-rotate-ccw" class="text-xs" />
+          </button>
+        </div>
       </div>
+
+      <!-- timestamp -->
+      <span v-if="showTimestamp" class="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1 px-1">
+        {{ timestamp }}
+      </span>
     </div>
   </div>
 </template>
@@ -49,10 +77,24 @@ const props = defineProps<{
   isUser: boolean;
   content: string;
   isLoading?: boolean;
+  fontSize?: number;
+  showTimestamp?: boolean;
+}>();
+
+defineEmits<{
+  retry: [];
 }>();
 
 const htmlContent = ref('');
 const contentRef = ref<HTMLElement | null>(null);
+const copiedMsg = ref(false);
+const timestamp = ref(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+async function copyMessage() {
+  await navigator.clipboard.writeText(props.content);
+  copiedMsg.value = true;
+  setTimeout(() => copiedMsg.value = false, 2000);
+}
 
 // Update content when props change
 watch(() => props.content, async (newVal) => {

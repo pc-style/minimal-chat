@@ -22,7 +22,7 @@
         </div>
 
         <div class="space-y-8">
-          <!-- theme -->
+          <!-- appearance -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-palette" class="text-sm text-neutral-400" />
@@ -30,6 +30,7 @@
                 Appearance
               </label>
             </div>
+            
             <div class="grid grid-cols-3 gap-3">
               <button
                 v-for="option in themeOptions"
@@ -47,17 +48,8 @@
                 <div v-if="colorMode.preference === option.value" class="absolute top-2 right-2 flex w-2 h-2 rounded-full bg-primary-500" />
               </button>
             </div>
-          </div>
 
-          <!-- accent color -->
-          <div class="space-y-4">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-sparkles" class="text-sm text-neutral-400" />
-              <label class="text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
-                Accent Color
-              </label>
-            </div>
-            <div class="flex gap-4 px-1">
+            <div class="flex gap-4 px-1 py-1">
               <button
                 v-for="color in accentColors"
                 :key="color.name"
@@ -71,11 +63,73 @@
               />
             </div>
           </div>
+
+          <!-- advanced -->
+          <div class="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-cog" class="text-sm text-neutral-400" />
+              <label class="text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                Advanced Features
+              </label>
+            </div>
+
+            <div class="space-y-3">
+              <!-- Compact Mode -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center shadow-sm">
+                    <UIcon name="i-lucide-layout-list" class="text-neutral-500" />
+                  </div>
+                  <div>
+                    <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Compact Sidebar</p>
+                    <p class="text-[11px] text-neutral-500">More chats in view</p>
+                  </div>
+                </div>
+                <USwitch v-model="isCompact" />
+              </div>
+
+              <!-- Font Size -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center shadow-sm">
+                    <UIcon name="i-lucide-type" class="text-neutral-500" />
+                  </div>
+                  <div>
+                    <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Message Font Size</p>
+                    <p class="text-[11px] text-neutral-500">Current: {{ fontSize }}px</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 bg-white dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                   <button @click="fontSize = Math.max(12, fontSize - 1)" class="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-md transition-colors">
+                     <UIcon name="i-lucide-minus" class="text-xs" />
+                   </button>
+                   <span class="text-xs font-bold w-6 text-center">{{ fontSize }}</span>
+                   <button @click="fontSize = Math.min(20, fontSize + 1)" class="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-md transition-colors">
+                     <UIcon name="i-lucide-plus" class="text-xs" />
+                   </button>
+                </div>
+              </div>
+
+              <!-- Show Timestamps -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center shadow-sm">
+                    <UIcon name="i-lucide-clock" class="text-neutral-500" />
+                  </div>
+                  <div>
+                    <p class="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Show Timestamps</p>
+                    <p class="text-[11px] text-neutral-500">On every message</p>
+                  </div>
+                </div>
+                <USwitch v-model="showTimestamps" />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="mt-10 pt-6 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
           <UButton
-            label="Done"
+            label="Save Changes"
             color="primary"
             size="md"
             class="px-8 font-bold rounded-xl shadow-lg shadow-primary-500/20"
@@ -90,6 +144,10 @@
 <script setup lang="ts">
 const isOpen = defineModel<boolean>({ default: false });
 const colorMode = useColorMode();
+
+const isCompact = useState("sidebarCompact", () => false);
+const fontSize = useState("chatFontSize", () => 15);
+const showTimestamps = useState("showTimestamps", () => true);
 
 const themeOptions = [
   { value: "light", label: "Light", icon: "i-lucide-sun" },

@@ -2,8 +2,33 @@
 @import "@nuxt/ui";
 
 :root {
+  --color-primary-400: #34d399; /* emerald-400 fallback */
+  --color-primary-500: #10b981; /* emerald-500 fallback */
+  --color-primary-600: #059669; /* emerald-600 fallback */
   --primary-glow: rgba(var(--color-primary-500), 0.15);
 }
+
+/* Override Nuxt UI primary colors with our reactive variables */
+.text-primary-500 { color: var(--color-primary-500) !important; }
+.bg-primary-500 { background-color: var(--color-primary-500) !important; }
+.border-primary-500 { border-color: var(--color-primary-500) !important; }
+.ring-primary-500 { --tw-ring-color: var(--color-primary-500) !important; }
+
+.hover\:text-primary-600:hover { color: var(--color-primary-600) !important; }
+.hover\:bg-primary-600:hover { background-color: var(--color-primary-600) !important; }
+.hover\:border-primary-600:hover { border-color: var(--color-primary-600) !important; }
+
+.dark .dark\:text-primary-400 { color: var(--color-primary-400) !important; }
+.dark .dark\:bg-primary-400 { background-color: var(--color-primary-400) !important; }
+.dark .dark\:border-primary-400 { border-color: var(--color-primary-400) !important; }
+
+.bg-primary-500\/10 { background-color: color-mix(in srgb, var(--color-primary-500) 10%, transparent) !important; }
+.bg-primary-500\/5 { background-color: color-mix(in srgb, var(--color-primary-500) 5%, transparent) !important; }
+.ring-primary-500\/10 { --tw-ring-color: color-mix(in srgb, var(--color-primary-500) 10%, transparent) !important; }
+.selection\:bg-primary-500\/30 ::selection { background-color: color-mix(in srgb, var(--color-primary-500) 30%, transparent) !important; }
+.from-primary-600 { --tw-gradient-from: var(--color-primary-600) !important; --tw-gradient-to: color-mix(in srgb, var(--color-primary-600) 0%, transparent) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+.via-primary-500 { --tw-gradient-to: color-mix(in srgb, var(--color-primary-500) 0%, transparent) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--color-primary-500), var(--tw-gradient-to) !important; }
+.to-primary-400 { --tw-gradient-to: var(--color-primary-400) !important; }
 
 * {
   -webkit-font-smoothing: antialiased;
@@ -52,34 +77,50 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.2);
+  @apply bg-neutral-400 dark:bg-neutral-600;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-/* focus states */
+/* focus states - fixed for rounded elements */
 *:focus-visible {
-  @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-neutral-950;
+  outline: none !important;
+  --tw-ring-offset-width: 2px;
+  --tw-ring-offset-color: white;
+  --tw-ring-color: color-mix(in srgb, var(--color-primary-500) 50%, transparent);
+  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color) !important;
+  border-radius: inherit;
+}
+
+.dark *:focus-visible {
+  --tw-ring-offset-color: #0a0a0a;
+}
+
+/* Specific fix for inputs/textareas */
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* typography enhancement */
+h1, h2, h3, h4, h5, h6 {
+  @apply tracking-tight font-bold text-neutral-900 dark:text-white;
+}
+
+/* code blocks refinement */
+pre {
+  @apply rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm;
 }
 
 /* glassmorphism helper */
 .glass {
-  @apply bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md;
+  @apply bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md border border-white/20 dark:border-neutral-800/20;
 }
 
 /* animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
